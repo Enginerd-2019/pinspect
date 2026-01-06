@@ -4,7 +4,7 @@
 **Target:** End of Week 1 (Jan 12, 2026)
 
 ### In Progress
-- [ ] Initialize GitHub repository with project board
+- [✅ ] Initialize GitHub repository with project board
 
 ### To Do
 - [ ] Read TLPI Chapters 3-4 (file I/O basics)

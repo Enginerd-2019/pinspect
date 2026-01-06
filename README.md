@@ -1,6 +1,6 @@
 # pinspect - Linux Process Inspector
 
-A command-line tool for inspecting Linux process internals by directly parsing the `/proc` filesystem.
+The pininspect program is a command-line tool for inspecting Linux process internals by directly parsing the `/proc` filesystem.
 
 ## Overview
 
@@ -8,12 +8,12 @@ A command-line tool for inspecting Linux process internals by directly parsing t
 
 ### Why This Project?
 
-Understanding how Linux exposes process information through `/proc` is foundational knowledge for systems programming. This tool:
+Understanding how Linux exposes process information through `/proc` is foundational knowledge for systems programming. This tool, when complete, will:
 
-- Parses `/proc/<PID>/status` for process state and memory usage
-- Reads `/proc/<PID>/fd/` to enumerate open file descriptors
-- Analyzes `/proc/net/tcp` and `/proc/net/udp` to identify network connections
-- Handles errors and edge cases gracefully
+- Parse `/proc/<PID>/status` for process state and memory usage
+- Read `/proc/<PID>/fd/` to enumerate open file descriptors
+- Analyze `/proc/net/tcp` and `/proc/net/udp` to identify network connections
+- Handle errors and edge cases gracefully
 
 Unlike `ps`, `top`, or `lsof`, this tool is built from scratch using only standard C library calls, making the underlying system calls and data formats explicit.
 
