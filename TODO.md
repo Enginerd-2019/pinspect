@@ -4,11 +4,11 @@
 **Target:** End of Week 1 (Jan 12, 2026)
 
 ### In Progress
-- [✅ ] Initialize GitHub repository with project board
+- [✅] Initialize GitHub repository with project board
 
 ### To Do
 - [ ] Read TLPI Chapters 3-4 (file I/O basics)
-- [ ] Explore `/proc/<PID>/status` manually for 3-5 processes
+- [✅] Explore `/proc/<PID>/status` manually for 3-5 processes
 - [ ] Document `/proc` file format observations in docs/
 
 ### Done
