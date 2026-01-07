@@ -69,19 +69,28 @@ Network Connections:
 
 ```
 process-inspector/
-├── src/           # Source files
-│   ├── main.c     # Entry point and argument parsing
-│   ├── proc.c     # /proc parsing functions
-│   └── net.c      # Network connection parsing
-├── include/       # Header files
-│   ├── proc.h
-│   └── net.h
-├── docs/          # Documentation
-│   └── architecture.md
-├── tests/         # Test files
+├── src/                # Source files
+│   ├── main.c          # Entry point, argument parsing, output
+│   ├── proc_status.c   # Parse /proc/<PID>/status
+│   ├── proc_fd.c       # Enumerate /proc/<PID>/fd/
+│   ├── proc_task.c     # Count /proc/<PID>/task/ entries
+│   ├── net.c           # Parse /proc/net/tcp and /proc/net/udp
+│   └── util.c          # Shared utilities
+├── include/            # Header files
+│   ├── pinspect.h      # Common types and constants
+│   ├── proc_status.h   # Status parsing API
+│   ├── proc_fd.h       # File descriptor API
+│   ├── proc_task.h     # Thread counting API
+│   ├── net.h           # Network parsing API
+│   └── util.h          # Utility functions
+├── docs/               # Documentation
+│   ├── proc-formats.md # /proc file format observations
+│   └── decisions.md    # Design decision records
+├── tests/              # Test files
 ├── Makefile
 ├── README.md
-├── TODO.md        # Task tracking
+├── TODO.md             # Task tracking
+├── CLAUDE.md           # Development guidelines
 └── LICENSE
 ```
 
