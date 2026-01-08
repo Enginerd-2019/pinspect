@@ -14,7 +14,9 @@
 #include "util.h"
 #include "pinspect.h"
 
-int build_proc_path(pid_t pid, const char *file, char *buf, size_t buflen)
+#define BASE 10
+
+int build_proc_path(pid_t pid, const char *file, char *out_path, size_t out_path_len)
 {
     /* TODO: Implement path construction
      *
@@ -26,11 +28,21 @@ int build_proc_path(pid_t pid, const char *file, char *buf, size_t buflen)
      * Example: build_proc_path(1234, "status", buf, sizeof(buf))
      *          should produce "/proc/1234/status"
      */
-    (void)pid;
-    (void)file;
-    (void)buf;
-    (void)buflen;
-    return -1;
+
+    int ret;
+
+    if(file != NULL){
+        ret = snprintf(out_path, out_path_len, "/proc/%d/%s", pid, file);
+    }else{
+        ret = snprintf(out_path, out_path_len, "/proc/%d", pid);
+    }
+
+    if(ret < 0 || ret >= (int)out_path_len){
+        fprintf(stderr, "Buffer Error\n");
+        return -1;
+    }
+
+    return 0;
 }
 
 bool pid_exists(pid_t pid)
@@ -44,8 +56,14 @@ bool pid_exists(pid_t pid)
      *
      * Note: Race condition possible - process may exit after check
      */
-    (void)pid;
-    return false;
+    char buf[256];
+    
+    if (build_proc_path(pid, NULL, buf, sizeof(buf)) != 0) {
+        return false;
+    }
+    
+    return access(buf, F_OK) == 0;
+
 }
 
 pid_t parse_pid(const char *str)
@@ -61,8 +79,39 @@ pid_t parse_pid(const char *str)
      *
      * Return parsed PID on success, -1 on error
      */
-    (void)str;
-    return -1;
+
+     if (str == NULL || *str == '\0') {
+        fprintf(stderr, "Expected a PID argument\n");
+        return -1;
+    }
+
+    const char *p = str;
+
+    while (*p != '\0') {
+        // Check if the current character is NOT a digit
+        // Cast to unsigned char is a common practice for ctype functions
+        if (!isdigit((unsigned char)*p)) { 
+            // Found a non-digit character, so the entire string is not purely numeric
+            fprintf(stderr, "The PID argument must be an integer\n");
+            return -1; 
+        }
+        p++; // Move to the next character
+    }
+
+    errno = 0;
+    pid_t pid = strtol(str, NULL, BASE);
+
+    if (errno == ERANGE) {
+        fprintf(stderr, "PID value out of range\n");
+        return -1;
+    }
+    
+    if (pid <= 0) {
+        fprintf(stderr, "PID must be positive\n");
+        return -1;
+    }
+
+    return pid;
 }
 
 const char *state_to_string(proc_state_t state)
@@ -80,8 +129,25 @@ const char *state_to_string(proc_state_t state)
      *
      * Return static string, never NULL
      */
-    (void)state;
-    return "Unknown";
+
+    switch (state) {
+    
+        case PROC_STATE_RUNNING:
+        return "Running";
+    case PROC_STATE_SLEEPING:
+        return "Sleeping";
+    case PROC_STATE_DISK_SLEEP:
+        return "Disk Sleep";
+    case PROC_STATE_ZOMBIE:
+        return "Zombie";
+    case PROC_STATE_STOPPED:
+        return "Stopped";
+    case PROC_STATE_IDLE:
+        return "Idle";
+    case PROC_STATE_UNKNOWN:
+    default:
+        return "Unknown";
+    }
 }
 
 proc_state_t char_to_state(char c)
@@ -97,8 +163,24 @@ proc_state_t char_to_state(char c)
      * - 'I' -> PROC_STATE_IDLE
      * - other -> PROC_STATE_UNKNOWN
      */
-    (void)c;
-    return PROC_STATE_UNKNOWN;
+
+    switch (c) {
+    
+        case 'R':
+        return PROC_STATE_RUNNING;
+    case 'S':
+        return PROC_STATE_SLEEPING;
+    case 'D':
+        return PROC_STATE_DISK_SLEEP;
+    case 'Z':
+        return PROC_STATE_ZOMBIE;
+    case 'T':
+        return PROC_STATE_STOPPED;
+    case 'I':
+        return PROC_STATE_IDLE;
+    default:
+        return PROC_STATE_UNKNOWN;
+    }
 }
 
 /* TODO: Implement format_memory_size()

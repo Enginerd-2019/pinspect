@@ -20,7 +20,7 @@
  * Returns 0 on success, -1 if buffer too small.
  * Does NOT check if path exists.
  */
-int build_proc_path(pid_t pid, const char *file, char *buf, size_t buflen);
+int build_proc_path(pid_t pid, const char *file, char *out_path, size_t out_path_len);
 
 /*
  * Check if a PID corresponds to an existing process.

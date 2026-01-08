@@ -19,14 +19,14 @@
 **Goal:** Parse `/proc/<PID>/status` for core process info
 
 ### Tasks
-- [ ] Implement PID validation and `/proc/<PID>/` existence check
-- [ ] Parse process name from `/proc/<PID>/status`
-- [ ] Parse process state (running, sleeping, zombie, etc.)
-- [ ] Parse UID/GID information
-- [ ] Parse memory usage (VmSize, VmRSS, VmPeak)
-- [ ] Format and display output cleanly
-- [ ] Handle errors gracefully (invalid PID, permission denied)
-- [ ] Write basic tests for parsing functions
+- [✅] Implement PID validation and `/proc/<PID>/` existence check
+- [✅] Parse process name from `/proc/<PID>/status`
+- [✅] Parse process state (running, sleeping, zombie, etc.)
+- [✅] Parse UID/GID information
+- [✅] Parse memory usage (VmSize, VmRSS, VmPeak)
+- [✅] Format and display output cleanly
+- [✅] Handle errors gracefully (invalid PID, permission denied)
+- [✅] Write basic tests for parsing functions
 
 ### Acceptance Criteria
 - `./pinspect <PID>` displays name, state, UID, and memory info

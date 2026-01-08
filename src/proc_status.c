@@ -41,8 +41,49 @@ static int parse_status_line(const char *line, proc_info_t *info)
      *
      * Note: Zombie/kernel threads lack Vm* fields - don't treat as error.
      */
-    (void)line;
-    (void)info;
+
+     if (strncmp(line, "Name:", 5) == 0) {
+        sscanf(line, "Name:\t%15s", info->name);
+        return 0;
+    }
+    if (strncmp(line, "State:", 6) == 0) {
+        char state_char;
+        if (sscanf(line, "State:\t%c", &state_char) == 1) {
+            info->state = char_to_state(state_char);
+        }
+        return 0;
+    }
+    if (strncmp(line, "Uid:", 4) == 0) {
+        if (sscanf(line, "Uid:\t%u\t%u", &info->uid_real, &info->uid_effective) == 2) {
+            return 0;
+        }
+    }
+    if (strncmp(line, "Gid:", 4) == 0) {
+        if (sscanf(line, "Gid:\t%u\t%u", &info->gid_real, &info->gid_effective) == 2) {
+            return 0;
+        }
+    }
+    if(strncmp(line, "VmSize:", 7) == 0){
+        if(sscanf(line, "VmSize:\t%lu", &info->vm_size_kb) == 1){
+            return 0;
+        }
+    }
+    if(strncmp(line, "VmRSS:", 6) == 0){
+        if(sscanf(line, "VmRSS:\t%lu", &info->vm_rss_kb) == 1){
+            return 0;
+        }
+    }
+    if(strncmp(line, "VmPeak:", 7) == 0){
+        if(sscanf(line, "VmPeak:\t%lu", &info->vm_peak_kb) == 1){
+            return 0;
+        }
+    }
+    if(strncmp(line, "Threads:", 8) == 0){
+        if(sscanf(line, "Threads:\t%d", &info->thread_count) == 1){
+            return 0;
+        }
+    }
+
     return 1;
 }
 
@@ -67,13 +108,27 @@ int read_proc_status(pid_t pid, proc_info_t *info)
      * Note: It's not an error if Vm* fields are missing (zombies, kernel threads)
      */
 
-    /* Stub: Initialize to zeros and call parse_status_line to avoid unused warning */
     memset(info, 0, sizeof(*info));
-    info->pid = pid;
-    parse_status_line("", info);
 
-    errno = ENOSYS;  /* Function not implemented */
-    return -1;
+    info->pid = pid;
+
+    char path_buf[256];
+    build_proc_path(pid, "status", path_buf, sizeof(path_buf));
+    
+    FILE *file = fopen(path_buf, "r");
+
+    if(file == NULL){
+        return -1;
+    }
+
+    char line_buffer[256];
+    while(fgets(line_buffer, sizeof(line_buffer), file) != NULL){
+        parse_status_line(line_buffer, info);
+    }
+
+    fclose(file);
+
+    return 0;
 }
 
 /* TODO: Implement read_proc_stat() for CPU time, start time, etc.

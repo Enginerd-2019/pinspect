@@ -96,7 +96,7 @@ static int parse_args(int argc, char *argv[])
         
         // Unknown case
         case '?':
-            fprintf(stderr, "Unknown Argument: See --help for usage");
+            fprintf(stderr, "Unknown Argument: %s\n", argv[optind]);
             return -1;
         }
     }
@@ -140,8 +140,15 @@ static void print_process_info(const proc_info_t *info)
      * - Consider using format_memory_size() for human-readable memory
      * - Handle zero Vm* values gracefully (zombies, kernel threads)
      */
-    (void)info;
+    printf("%-10s %s (PID %d)\n", "Process:", info->name, info->pid);
+    printf("%-10s %s\n", "State:", state_to_string(info->state));
+    printf("%-10s %u (real), %u (effective)\n", "UID:", info->uid_real, info->uid_effective);
+    printf("Memory:    VmSize: %lu KB, VmRSS: %lu KB, VmPeak: %lu KB\n", 
+       info->vm_size_kb, info->vm_rss_kb, info->vm_peak_kb);
+    printf("Threads:   %d\n", info->thread_count);
+
 }
+
 
 /* TODO: Week 3 - Add print_file_descriptors() for FD list output */
 
