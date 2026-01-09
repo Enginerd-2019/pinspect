@@ -20,29 +20,13 @@
  *
  * Matches the field name and extracts the value into proc_info_t.
  * Returns 0 if line was parsed, 1 if line didn't match any known field.
+ *
+ * Note: Zombie and kernel thread processes lack Vm* fields - this is not
+ * treated as an error, and those fields remain zero-initialized.
  */
 static int parse_status_line(const char *line, proc_info_t *info)
 {
-    /* TODO: Implement line parsing
-     *
-     * Strategy: Check if line starts with known field names, then extract values.
-     *
-     * Fields to parse:
-     * - "Name:\t<string>"     -> info->name (use sscanf with %15s to limit)
-     * - "State:\t<char> ..."  -> info->state (extract first char, use char_to_state)
-     * - "Uid:\t<r> <e> ..."   -> info->uid_real, info->uid_effective (first two values)
-     * - "Gid:\t<r> <e> ..."   -> info->gid_real, info->gid_effective (first two values)
-     * - "VmSize:\t<val> kB"   -> info->vm_size_kb
-     * - "VmRSS:\t<val> kB"    -> info->vm_rss_kb
-     * - "VmPeak:\t<val> kB"   -> info->vm_peak_kb
-     * - "Threads:\t<val>"     -> info->thread_count
-     *
-     * Use strncmp() to check field prefix, then sscanf() to extract values.
-     *
-     * Note: Zombie/kernel threads lack Vm* fields - don't treat as error.
-     */
-
-     if (strncmp(line, "Name:", 5) == 0) {
+    if (strncmp(line, "Name:", 5) == 0) {
         sscanf(line, "Name:\t%15s", info->name);
         return 0;
     }
@@ -87,36 +71,22 @@ static int parse_status_line(const char *line, proc_info_t *info)
     return 1;
 }
 
+/*
+ * Read and parse /proc/<pid>/status file.
+ *
+ * Returns 0 on success, -1 on error with errno set:
+ * - ENOENT: Process doesn't exist or exited during read
+ * - EACCES: Permission denied (common for other users' processes)
+ */
 int read_proc_status(pid_t pid, proc_info_t *info)
 {
-    /* TODO: Implement status file reading
-     *
-     * Steps:
-     * 1. Initialize info struct to zero/defaults
-     * 2. Set info->pid
-     * 3. Build path to /proc/<pid>/status using build_proc_path()
-     * 4. Open file with fopen() - handle ENOENT and EACCES appropriately
-     * 5. Read line by line with fgets()
-     * 6. Call parse_status_line() for each line
-     * 7. Close file
-     * 8. Return 0 on success, -1 on error
-     *
-     * Error handling:
-     * - ENOENT: Process doesn't exist or exited during read
-     * - EACCES: Permission denied (common for other users' processes)
-     *
-     * Note: It's not an error if Vm* fields are missing (zombies, kernel threads)
-     */
-
     memset(info, 0, sizeof(*info));
-
     info->pid = pid;
 
     char path_buf[256];
     build_proc_path(pid, "status", path_buf, sizeof(path_buf));
-    
-    FILE *file = fopen(path_buf, "r");
 
+    FILE *file = fopen(path_buf, "r");
     if(file == NULL){
         return -1;
     }
@@ -127,7 +97,6 @@ int read_proc_status(pid_t pid, proc_info_t *info)
     }
 
     fclose(file);
-
     return 0;
 }
 

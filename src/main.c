@@ -49,38 +49,23 @@ static void print_version(void)
     printf("%s version %s\n", PROGRAM_NAME, VERSION);
 }
 
+/*
+ * Parse command-line arguments using getopt_long().
+ * Returns 0 on success, -1 on error.
+ */
 static int parse_args(int argc, char *argv[])
 {
-    /* TODO: Implement argument parsing
-     *
-     * Use getopt_long() for both short and long options:
-     * - "-v" / "--verbose"  -> options.verbose = true
-     * - "-n" / "--network"  -> options.network_only = true
-     * - "-h" / "--help"     -> options.help = true
-     * - "-V" / "--version"  -> options.version = true
-     *
-     * After options, expect exactly one positional argument (PID).
-     * Use parse_pid() from util.c to validate and convert.
-     *
-     * Return 0 on success, -1 on error (invalid options or PID).
-     */
-
-    // Argument mapping
     static struct option long_options[] = {
-
         {"verbose", no_argument, NULL, 'v'},
         {"network", no_argument, NULL, 'n'},
-        {"help", no_argument, NULL, 'h'},
+        {"help",    no_argument, NULL, 'h'},
         {"version", no_argument, NULL, 'V'},
-        {NULL,      0,           NULL,  0 }  /* Terminator */
-    };  
+        {NULL,      0,           NULL,  0}
+    };
 
     int opt;
-
     while((opt = getopt_long(argc, argv, "vnhV", long_options, NULL)) != -1){
-
-        switch (opt)
-        {
+        switch (opt) {
         case 'v':
             options.verbose = true;
             break;
@@ -92,9 +77,7 @@ static int parse_args(int argc, char *argv[])
             break;
         case 'V':
             options.version = true;
-            break;        
-        
-        // Unknown case
+            break;
         case '?':
             fprintf(stderr, "Unknown Argument: %s\n", argv[optind]);
             return -1;
@@ -112,8 +95,6 @@ static int parse_args(int argc, char *argv[])
     }
 
     options.pid = parse_pid(argv[optind]);
-
-    // Check for pid
     if(options.pid == -1){
         fprintf(stderr, "Invalid PID: %s\n", argv[optind]);
         return -1;
@@ -122,31 +103,19 @@ static int parse_args(int argc, char *argv[])
     return 0;
 }
 
+/*
+ * Format and display process information.
+ * Memory values are in KB; zero values indicate zombie or kernel thread.
+ */
 static void print_process_info(const proc_info_t *info)
 {
-    /* TODO: Implement output formatting
-     *
-     * Format similar to:
-     *
-     * Process: firefox (PID 1234)
-     * State:   Running
-     * UID:     1000 (real), 1000 (effective)
-     * GID:     1000 (real), 1000 (effective)
-     * Memory:  VmSize: 2.1 GB, VmRSS: 512 MB, VmPeak: 2.5 GB
-     * Threads: 47
-     *
-     * Notes:
-     * - Use state_to_string() for state display
-     * - Consider using format_memory_size() for human-readable memory
-     * - Handle zero Vm* values gracefully (zombies, kernel threads)
-     */
     printf("%-10s %s (PID %d)\n", "Process:", info->name, info->pid);
     printf("%-10s %s\n", "State:", state_to_string(info->state));
-    printf("%-10s %u (real), %u (effective)\n", "UID:", info->uid_real, info->uid_effective);
-    printf("Memory:    VmSize: %lu KB, VmRSS: %lu KB, VmPeak: %lu KB\n", 
-       info->vm_size_kb, info->vm_rss_kb, info->vm_peak_kb);
+    printf("%-10s %u (real), %u (effective)\n", "UID:",
+           info->uid_real, info->uid_effective);
+    printf("Memory:    VmSize: %lu KB, VmRSS: %lu KB, VmPeak: %lu KB\n",
+           info->vm_size_kb, info->vm_rss_kb, info->vm_peak_kb);
     printf("Threads:   %d\n", info->thread_count);
-
 }
 
 
@@ -154,29 +123,20 @@ static void print_process_info(const proc_info_t *info)
 
 /* TODO: Week 4 - Add print_network_connections() for socket info */
 
+/*
+ * Main entry point for pinspect.
+ *
+ * Exit codes:
+ * - 0: Success
+ * - 1: Invalid arguments
+ * - 2: Process not found
+ * - 3: Permission denied
+ */
 int main(int argc, char *argv[])
 {
-    /* TODO: Implement main flow
-     *
-     * Steps:
-     * 1. Parse command-line arguments
-     * 2. Handle --help and --version early exits
-     * 3. Validate PID exists using pid_exists()
-     * 4. Read process status with read_proc_status()
-     * 5. Print process information
-     * 6. TODO Week 3: Enumerate file descriptors if not --network
-     * 7. TODO Week 4: Find network connections if --network or --verbose
-     * 8. Return appropriate exit code
-     *
-     * Exit codes:
-     * - 0: Success
-     * - 1: Invalid arguments
-     * - 2: Process not found
-     * - 3: Permission denied
-     */
-
     if (parse_args(argc, argv) != 0) {
-        fprintf(stderr, "Try '%s --help' for more information.\n", PROGRAM_NAME);
+        fprintf(stderr, "Try '%s --help' for more information.\n",
+                PROGRAM_NAME);
         return 1;
     }
 
@@ -190,9 +150,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    /* TODO: Validate PID exists */
-
-    /* TODO: Read and display process info */
+    /* Read and display process info */
     proc_info_t info;
     if (read_proc_status(options.pid, &info) != 0) {
         fprintf(stderr, "%s: cannot read process %d: %s\n",

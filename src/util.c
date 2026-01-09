@@ -16,19 +16,12 @@
 
 #define BASE 10
 
+/*
+ * Construct path to /proc/<pid> or /proc/<pid>/<file>.
+ * Returns -1 if the buffer is too small for the resulting path.
+ */
 int build_proc_path(pid_t pid, const char *file, char *out_path, size_t out_path_len)
 {
-    /* TODO: Implement path construction
-     *
-     * Steps:
-     * 1. Use snprintf to build "/proc/<pid>/<file>" or "/proc/<pid>" if file is NULL
-     * 2. Check return value to ensure buffer wasn't truncated
-     * 3. Return 0 on success, -1 if buffer too small
-     *
-     * Example: build_proc_path(1234, "status", buf, sizeof(buf))
-     *          should produce "/proc/1234/status"
-     */
-
     int ret;
 
     if(file != NULL){
@@ -38,76 +31,50 @@ int build_proc_path(pid_t pid, const char *file, char *out_path, size_t out_path
     }
 
     if(ret < 0 || ret >= (int)out_path_len){
-        fprintf(stderr, "Buffer Error\n");
         return -1;
     }
 
     return 0;
 }
 
+/*
+ * Check if /proc/<pid> exists using access().
+ * Note: Process may exit between this check and subsequent operations.
+ */
 bool pid_exists(pid_t pid)
 {
-    /* TODO: Implement PID existence check
-     *
-     * Steps:
-     * 1. Build path to /proc/<pid>
-     * 2. Use access() with F_OK to check existence
-     * 3. Return true if exists, false otherwise
-     *
-     * Note: Race condition possible - process may exit after check
-     */
     char buf[256];
-    
+
     if (build_proc_path(pid, NULL, buf, sizeof(buf)) != 0) {
         return false;
     }
-    
-    return access(buf, F_OK) == 0;
 
+    return access(buf, F_OK) == 0;
 }
 
+/*
+ * Parse and validate a PID string.
+ * Rejects NULL, empty, non-numeric, negative, and zero values.
+ */
 pid_t parse_pid(const char *str)
 {
-    /* TODO: Implement PID string parsing
-     *
-     * Steps:
-     * 1. Check for NULL or empty string
-     * 2. Reject strings starting with non-digit (handles negative numbers)
-     * 3. Use strtol() with base 10
-     * 4. Check for conversion errors (endptr, errno, overflow)
-     * 5. Validate result is in valid PID range (> 0, <= PID_MAX)
-     *
-     * Return parsed PID on success, -1 on error
-     */
-
-     if (str == NULL || *str == '\0') {
-        fprintf(stderr, "Expected a PID argument\n");
+    if (str == NULL || *str == '\0') {
         return -1;
     }
 
+    /* Verify string contains only digits */
     const char *p = str;
-
     while (*p != '\0') {
-        // Check if the current character is NOT a digit
-        // Cast to unsigned char is a common practice for ctype functions
-        if (!isdigit((unsigned char)*p)) { 
-            // Found a non-digit character, so the entire string is not purely numeric
-            fprintf(stderr, "The PID argument must be an integer\n");
-            return -1; 
+        if (!isdigit((unsigned char)*p)) {
+            return -1;
         }
-        p++; // Move to the next character
+        p++;
     }
 
     errno = 0;
     pid_t pid = strtol(str, NULL, BASE);
 
-    if (errno == ERANGE) {
-        fprintf(stderr, "PID value out of range\n");
-        return -1;
-    }
-    
-    if (pid <= 0) {
-        fprintf(stderr, "PID must be positive\n");
+    if (errno == ERANGE || pid <= 0) {
         return -1;
     }
 
@@ -116,23 +83,8 @@ pid_t parse_pid(const char *str)
 
 const char *state_to_string(proc_state_t state)
 {
-    /* TODO: Implement state to string conversion
-     *
-     * Use switch statement to map:
-     * - PROC_STATE_RUNNING    -> "Running"
-     * - PROC_STATE_SLEEPING   -> "Sleeping"
-     * - PROC_STATE_DISK_SLEEP -> "Disk Sleep"
-     * - PROC_STATE_ZOMBIE     -> "Zombie"
-     * - PROC_STATE_STOPPED    -> "Stopped"
-     * - PROC_STATE_IDLE       -> "Idle"
-     * - PROC_STATE_UNKNOWN    -> "Unknown"
-     *
-     * Return static string, never NULL
-     */
-
     switch (state) {
-    
-        case PROC_STATE_RUNNING:
+    case PROC_STATE_RUNNING:
         return "Running";
     case PROC_STATE_SLEEPING:
         return "Sleeping";
@@ -150,23 +102,14 @@ const char *state_to_string(proc_state_t state)
     }
 }
 
+/*
+ * Map single-character state codes from /proc/<pid>/status
+ * to proc_state_t enum values.
+ */
 proc_state_t char_to_state(char c)
 {
-    /* TODO: Implement character to state conversion
-     *
-     * Map single character codes from /proc/<pid>/status:
-     * - 'R' -> PROC_STATE_RUNNING
-     * - 'S' -> PROC_STATE_SLEEPING
-     * - 'D' -> PROC_STATE_DISK_SLEEP
-     * - 'Z' -> PROC_STATE_ZOMBIE
-     * - 'T' -> PROC_STATE_STOPPED
-     * - 'I' -> PROC_STATE_IDLE
-     * - other -> PROC_STATE_UNKNOWN
-     */
-
     switch (c) {
-    
-        case 'R':
+    case 'R':
         return PROC_STATE_RUNNING;
     case 'S':
         return PROC_STATE_SLEEPING;
