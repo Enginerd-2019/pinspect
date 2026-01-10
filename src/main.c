@@ -11,6 +11,7 @@
 #include <getopt.h>
 #include "pinspect.h"
 #include "proc_status.h"
+#include "proc_fd.h"
 #include "util.h"
 
 #define PROGRAM_NAME "pinspect"
@@ -119,7 +120,44 @@ static void print_process_info(const proc_info_t *info)
 }
 
 
-/* TODO: Week 3 - Add print_file_descriptors() for FD list output */
+/*
+ * Display file descriptor information for a process.
+ * 
+ * In normal mode: Just show count
+ * In verbose mode: Show detailed list of all FDs
+ */
+static void print_file_descriptors(pid_t pid, bool verbose)
+{
+    fd_entry_t *fds = NULL;
+    int count = 0;
+    
+    // Enumerate file descriptors
+    if (enumerate_fds(pid, &fds, &count) != 0) {
+        // Permission denied or process exited - graceful degradation
+        printf("\nFile Descriptors: Unable to read (permission denied)\n");
+        return;
+    }
+    
+    // Always show the count
+    printf("\nFile Descriptors: %d open\n", count);
+    
+    // In verbose mode, show each FD
+    if (verbose && count > 0) {
+        printf("\n  FD    Type      Target\n");
+        printf("  ----  --------  ----------------------------------------\n");
+        
+        for (int i = 0; i < count; i++) {
+            const char *type = fds[i].is_socket ? "socket" : "file";
+            printf("  %-4d  %-8s  %s\n", 
+                   fds[i].fd, 
+                   type, 
+                   fds[i].target);
+        }
+    }
+    
+    // Clean up allocated memory
+    fd_entries_free(fds);
+}
 
 /* TODO: Week 4 - Add print_network_connections() for socket info */
 
@@ -161,6 +199,7 @@ int main(int argc, char *argv[])
     print_process_info(&info);
 
     /* TODO: Week 3 - Add FD enumeration here */
+    print_file_descriptors(options.pid, options.verbose);
 
     /* TODO: Week 4 - Add network connection lookup here */
 

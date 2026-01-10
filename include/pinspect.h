@@ -46,7 +46,18 @@ typedef struct {
     int thread_count;
 } proc_info_t;
 
-/* TODO: Week 3 - Add fd_entry_t for file descriptor enumeration */
+/*
+ * File descriptor entry - describes one open file descriptor.
+ *
+ * Each entry in /proc/<pid>/fd/ is a symlink. We capture the FD number
+ * and what it points to.
+ */
+typedef struct {
+    int fd;                         /* File descriptor number */
+    char target[PATH_MAX];          /* Symlink target (what FD points to) */
+    bool is_socket;                 /* True if target is a socket */
+    unsigned long socket_inode;     /* If is_socket, the inode number */
+} fd_entry_t;
 
 /* TODO: Week 4 - Add tcp_state_t enum for TCP connection states */
 
