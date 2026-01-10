@@ -58,7 +58,4 @@ void fd_entries_free(fd_entry_t *entries);
  */
 bool parse_socket_inode(const char *target, unsigned long *inode);
 
-/* TODO: Week 4 - Add fd_entry_has_inode() helper to check if any FD
- * matches a given inode. Useful when correlating network sockets. */
-
 #endif /* PROC_FD_H */

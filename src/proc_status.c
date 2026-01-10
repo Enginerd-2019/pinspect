@@ -99,23 +99,3 @@ int read_proc_status(pid_t pid, proc_info_t *info)
     fclose(file);
     return 0;
 }
-
-/* TODO: Implement read_proc_stat() for CPU time, start time, etc.
- *
- * /proc/<pid>/stat contains space-separated fields (not key: value format).
- * Fields of interest:
- * - Field 14: utime (user mode ticks)
- * - Field 15: stime (kernel mode ticks)
- * - Field 22: starttime (ticks since boot when process started)
- *
- * See: man 5 proc, section on /proc/[pid]/stat
- */
-
-/* TODO: Implement read_proc_cmdline() for full command line
- *
- * /proc/<pid>/cmdline contains null-separated arguments.
- * Reading strategy:
- * 1. Read entire file into buffer
- * 2. Replace null bytes with spaces (except final one)
- * 3. Handle kernel threads (empty cmdline)
- */

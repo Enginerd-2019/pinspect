@@ -26,12 +26,7 @@ typedef enum {
     PROC_STATE_UNKNOWN
 } proc_state_t;
 
-/*
- * Basic process info from /proc/<PID>/status
- *
- * TODO: Consider adding ppid (parent PID) field
- * TODO: Consider adding voluntary/nonvoluntary context switches
- */
+/* Basic process info from /proc/<PID>/status */
 typedef struct {
     pid_t pid;
     char name[PROC_NAME_MAX];
@@ -58,9 +53,5 @@ typedef struct {
     bool is_socket;                 /* True if target is a socket */
     unsigned long socket_inode;     /* If is_socket, the inode number */
 } fd_entry_t;
-
-/* TODO: Week 4 - Add tcp_state_t enum for TCP connection states */
-
-/* TODO: Week 4 - Add socket_info_t for network socket information */
 
 #endif /* PINSPECT_H */

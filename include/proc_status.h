@@ -28,8 +28,4 @@
  */
 int read_proc_status(pid_t pid, proc_info_t *info);
 
-/* TODO: Add read_proc_stat() for additional fields like CPU time */
-
-/* TODO: Add read_proc_cmdline() for full command line */
-
 #endif /* PROC_STATUS_H */

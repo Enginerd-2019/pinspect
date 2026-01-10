@@ -54,8 +54,4 @@ const char *state_to_string(proc_state_t state);
  */
 proc_state_t char_to_state(char c);
 
-/* TODO: Add format_memory_size() to convert KB to human-readable */
-
-/* TODO: Week 4 - Add format_ip_port() for network address formatting */
-
 #endif /* UTIL_H */

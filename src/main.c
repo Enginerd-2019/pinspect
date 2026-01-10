@@ -155,11 +155,8 @@ static void print_file_descriptors(pid_t pid, bool verbose)
         }
     }
     
-    // Clean up allocated memory
     fd_entries_free(fds);
 }
-
-/* TODO: Week 4 - Add print_network_connections() for socket info */
 
 /*
  * Main entry point for pinspect.
@@ -197,11 +194,7 @@ int main(int argc, char *argv[])
     }
 
     print_process_info(&info);
-
-    /* TODO: Week 3 - Add FD enumeration here */
     print_file_descriptors(options.pid, options.verbose);
-
-    /* TODO: Week 4 - Add network connection lookup here */
 
     return 0;
 }

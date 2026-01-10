@@ -125,11 +125,3 @@ proc_state_t char_to_state(char c)
         return PROC_STATE_UNKNOWN;
     }
 }
-
-/* TODO: Implement format_memory_size()
- *
- * Convert kilobytes to human-readable format (KB, MB, GB).
- * Use static buffer or require caller to provide buffer.
- *
- * Example: 1048576 KB -> "1.0 GB"
- */
