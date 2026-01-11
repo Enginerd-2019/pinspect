@@ -37,6 +37,25 @@ int build_proc_path(pid_t pid, const char *file, char *out_path, size_t out_path
     return 0;
 }
 
+
+/*
+ * Build path to /proc/<pid>/task/<tid>/<file>.
+ *
+ * Returns:
+ *   0 on success
+ *  -1 if path would overflow buffer
+ */
+int build_task_path(pid_t pid, pid_t tid, const char *file,
+                    char *buf, size_t buflen)
+{
+    int written = snprintf(buf, buflen, "/proc/%d/task/%d/%s",
+                           pid, tid, file);
+    if (written < 0 || (size_t)written >= buflen) {
+        return -1;
+    }
+    return 0;
+}
+
 /*
  * Check if /proc/<pid> exists using access().
  * Note: Process may exit between this check and subsequent operations.

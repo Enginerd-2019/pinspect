@@ -179,5 +179,8 @@ void fd_entries_free(fd_entry_t *entries)
 
 bool parse_socket_inode(const char *target, unsigned long *inode)
 {
+    if (target == NULL) {
+        return false;
+    }
     return sscanf(target, "socket:[%lu]", inode) == 1;
 }

@@ -12,6 +12,7 @@
 #include "pinspect.h"
 #include "proc_status.h"
 #include "proc_fd.h"
+#include "proc_task.h"
 #include "util.h"
 
 #define PROGRAM_NAME "pinspect"
@@ -159,6 +160,40 @@ static void print_file_descriptors(pid_t pid, bool verbose)
 }
 
 /*
+ * Display thread information for a process.
+ *
+ * In normal mode: Just show count (already from proc_status)
+ * In verbose mode: Show detailed list of all threads
+ */
+static void print_threads(pid_t pid, bool verbose)
+{
+    if (!verbose) {
+        return;  // Thread count already shown by print_process_info()
+    }
+
+    thread_info_t *threads = NULL;
+    int count = 0;
+
+    if (enumerate_threads(pid, &threads, &count) != 0) {
+        printf("\nThreads: Unable to enumerate (permission denied)\n");
+        return;
+    }
+
+    printf("\nThread Details:\n");
+    printf("  TID     State       Name\n");
+    printf("  ------  ----------  ----------------\n");
+
+    for (int i = 0; i < count; i++) {
+        printf("  %-6d  %-10s  %s\n",
+               threads[i].tid,
+               state_to_string(threads[i].state),
+               threads[i].name);
+    }
+
+    thread_info_free(threads);
+}
+
+/*
  * Main entry point for pinspect.
  *
  * Exit codes:
@@ -195,6 +230,7 @@ int main(int argc, char *argv[])
 
     print_process_info(&info);
     print_file_descriptors(options.pid, options.verbose);
+    print_threads(options.pid, options.verbose);
 
     return 0;
 }

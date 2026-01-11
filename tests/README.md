@@ -30,6 +30,12 @@ Tests for utility functions in `src/util.c`:
   - Path construction without file
   - Small buffer handling
 
+- **build_task_path()** - 4 tests
+  - Path construction with file (comm)
+  - Path construction with status file
+  - Small buffer handling
+  - TID equal to PID case
+
 - **pid_exists()** - 3 tests
   - PID 1 (init/systemd)
   - Current process
@@ -39,7 +45,7 @@ Tests for utility functions in `src/util.c`:
   - state_to_string() for all states
   - char_to_state() for valid and invalid chars
 
-**Total: 21 tests**
+**Total: 25 tests**
 
 ### test_proc_status.c
 Tests for /proc/<PID>/status parsing in `src/proc_status.c`:
@@ -52,6 +58,46 @@ Tests for /proc/<PID>/status parsing in `src/proc_status.c`:
   - errno verification
 
 **Total: 9 tests**
+
+### test_proc_task.c
+Tests for thread enumeration in `src/proc_task.c`:
+
+- **enumerate_threads()** - 7 tests
+  - Current process enumeration
+  - Main thread TID equals PID
+  - Thread has valid name
+  - Thread has valid state
+  - PID 1 (with permission handling)
+  - Non-existent PID error handling
+  - Error state cleanup (count set to 0)
+
+- **thread_info_free()** - 1 test
+  - NULL pointer safety
+
+**Total: 8 tests**
+
+### test_proc_fd.c
+Tests for file descriptor enumeration in `src/proc_fd.c`:
+
+- **enumerate_fds()** - 6 tests
+  - Current process enumeration
+  - Standard FDs present (stdin/stdout/stderr)
+  - FD entries have valid targets
+  - PID 1 (with permission handling)
+  - Non-existent PID error handling
+  - Error state cleanup (count set to 0)
+
+- **fd_entries_free()** - 1 test
+  - NULL pointer safety
+
+- **parse_socket_inode()** - 5 tests
+  - Valid socket format parsing
+  - Large inode numbers
+  - Regular file rejection
+  - Pipe format rejection
+  - NULL input handling
+
+**Total: 12 tests**
 
 ## Test Output
 
@@ -68,9 +114,9 @@ Testing parse_pid with NULL... [PASS]
 ...
 
 === Test Results ===
-Passed: 21
+Passed: 25
 Failed: 0
-Total:  21
+Total:  25
 ```
 
 ## Adding New Tests
@@ -113,10 +159,8 @@ This catches:
 
 ## Future Tests
 
-When implementing Week 3-4 features, add:
+When implementing Milestone 3 (Network Connections), add:
 
-- `test_proc_fd.c` - File descriptor enumeration tests
-- `test_proc_task.c` - Thread counting tests
 - `test_net.c` - Network connection parsing tests
 
 ## Notes

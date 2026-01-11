@@ -31,7 +31,7 @@ src/
 ├── main.c          # Entry point, argument parsing, output orchestration
 ├── proc_status.c   # Parse /proc/<PID>/status (name, state, memory, UIDs)
 ├── proc_fd.c       # Enumerate /proc/<PID>/fd/ (file descriptors)
-├── proc_task.c     # Count /proc/<PID>/task/ entries (threads)
+├── proc_task.c     # Enumerate /proc/<PID>/task/ (thread details)
 ├── net.c           # Parse /proc/net/tcp and /proc/net/udp
 └── util.c          # Shared utilities (error handling, string helpers)
 
@@ -39,7 +39,7 @@ include/
 ├── pinspect.h      # Main header with common types and constants
 ├── proc_status.h   # Status parsing interface
 ├── proc_fd.h       # File descriptor enumeration interface
-├── proc_task.h     # Thread counting interface
+├── proc_task.h     # Thread enumeration interface
 ├── net.h           # Network parsing interface
 └── util.h          # Utility function declarations
 ```
@@ -56,7 +56,7 @@ include/
 main()
   → validate_pid()           [util.c]
   → read_proc_status()       [proc_status.c]  → returns ProcessInfo struct
-  → count_threads()          [proc_task.c]    → returns int
+  → enumerate_threads()      [proc_task.c]    → returns ThreadList struct
   → enumerate_fds()          [proc_fd.c]      → returns FDList struct
   → find_process_sockets()   [net.c]          → returns SocketList struct
   → print_output()           [main.c]
@@ -100,6 +100,13 @@ typedef struct {
     bool is_socket;
     unsigned long socket_inode;  /* If is_socket, the inode number */
 } fd_entry_t;
+
+/* Thread information - per-thread details from /proc/<PID>/task/<TID>/ */
+typedef struct {
+    pid_t tid;               /* Thread ID */
+    char name[16];           /* Thread name from comm file */
+    proc_state_t state;      /* Thread state (Running, Sleeping, etc.) */
+} thread_info_t;
 
 /* TCP connection state */
 typedef enum {
@@ -485,15 +492,20 @@ int read_proc_status(pid_t pid, proc_info_t *info);
 ### Week 3: Threads and File Descriptors
 
 **Files to Add:**
-- `src/proc_task.c` - Thread counting
+- `src/proc_task.c` - Thread enumeration (TID, name, state)
 - `src/proc_fd.c` - FD enumeration
 - `include/proc_task.h`
 - `include/proc_fd.h`
 
 **Key Functions:**
 ```c
+/* util.c - add new path builder for thread files */
+int build_task_path(pid_t pid, pid_t tid, const char *file,
+                    char *buf, size_t buflen);
+
 /* proc_task.c */
-int count_threads(pid_t pid);
+int enumerate_threads(pid_t pid, thread_info_t **threads, int *count);
+void thread_info_free(thread_info_t *threads);
 
 /* proc_fd.c */
 int enumerate_fds(pid_t pid, fd_entry_t **entries, int *count);
@@ -501,8 +513,14 @@ void fd_entries_free(fd_entry_t *entries);
 bool parse_socket_inode(const char *target, unsigned long *inode);
 ```
 
+**Why Enumerate Instead of Count:**
+- Thread count is already available from `/proc/<pid>/status` (parsed by proc_status.c)
+- Enumeration provides genuinely new information: per-thread TID, name, and state
+- Useful for debugging multi-threaded applications
+
 **Testing Focus:**
-- Multi-threaded processes
+- Multi-threaded processes (Firefox, Chrome, VS Code)
+- Single-threaded processes (your shell)
 - Processes with many open files
 - Socket detection in FD list
 

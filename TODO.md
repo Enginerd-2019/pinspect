@@ -36,18 +36,20 @@
 ---
 
 ## Milestone 2: Thread and File Descriptor Info (Week 3)
-**Goal:** Extend tool to show thread count and open files
+**Goal:** Extend tool to show thread details and open files
 
 ### Tasks
-- [ ] Count threads from `/proc/<PID>/task/`
-- [ ] List open file descriptors from `/proc/<PID>/fd/`
-- [ ] Resolve symlinks to show actual file paths
-- [ ] Handle permission errors gracefully
-- [ ] Add `-v` verbose flag for detailed FD info
-- [ ] Update README with new features
+- [✅] Add `build_task_path()` utility to `util.c/h`
+- [✅] Enumerate threads from `/proc/<PID>/task/` with TID, name, and state
+- [✅] List open file descriptors from `/proc/<PID>/fd/`
+- [✅] Resolve symlinks to show actual file paths
+- [✅] Handle permission errors gracefully
+- [✅] Add `-v` verbose flag for detailed thread and FD info
+- [✅] Update README with new features
 
 ### Acceptance Criteria
-- Shows thread count for any process
+- Shows thread count (from status) for any process
+- In verbose mode, shows per-thread TID, name, and state
 - Lists open files (when readable)
 - Graceful degradation when lacking permissions
 
@@ -115,7 +117,7 @@
 | `/proc/<PID>/status` | Process state, memory, UID/GID |
 | `/proc/<PID>/stat` | CPU times, priority, threads |
 | `/proc/<PID>/fd/` | Open file descriptors |
-| `/proc/<PID>/task/` | Thread information |
+| `/proc/<PID>/task/` | Thread directories (TID, comm, status) |
 | `/proc/net/tcp` | TCP connection table |
 | `/proc/net/udp` | UDP connection table |
 
@@ -126,4 +128,4 @@
 
 ---
 
-*Last updated: January 5, 2026*
+*Last updated: January 11, 2026*

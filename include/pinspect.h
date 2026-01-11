@@ -54,4 +54,13 @@ typedef struct {
     unsigned long socket_inode;     /* If is_socket, the inode number */
 } fd_entry_t;
 
+/*
+ * Thread information - describes one thread in a process.
+ */
+typedef struct {
+    pid_t tid;              /* Thread ID */
+    char name[16];          /* Thread name from comm file */
+    proc_state_t state;     /* Thread state */
+} thread_info_t;
+
 #endif /* PINSPECT_H */

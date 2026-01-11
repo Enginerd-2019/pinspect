@@ -137,6 +137,38 @@ void test_build_proc_path_small_buffer(void)
     ASSERT_EQ(build_proc_path(1234, "status", buf, sizeof(buf)), -1);
 }
 
+/* Test build_task_path() */
+void test_build_task_path_with_file(void)
+{
+    TEST("build_task_path with file");
+    char buf[256];
+    int ret = build_task_path(1234, 1235, "comm", buf, sizeof(buf));
+    ASSERT_TRUE(ret == 0 && strcmp(buf, "/proc/1234/task/1235/comm") == 0);
+}
+
+void test_build_task_path_status(void)
+{
+    TEST("build_task_path with status file");
+    char buf[256];
+    int ret = build_task_path(100, 101, "status", buf, sizeof(buf));
+    ASSERT_TRUE(ret == 0 && strcmp(buf, "/proc/100/task/101/status") == 0);
+}
+
+void test_build_task_path_small_buffer(void)
+{
+    TEST("build_task_path with small buffer");
+    char buf[10];
+    ASSERT_EQ(build_task_path(1234, 1235, "comm", buf, sizeof(buf)), -1);
+}
+
+void test_build_task_path_same_tid_pid(void)
+{
+    TEST("build_task_path with TID equal to PID");
+    char buf[256];
+    int ret = build_task_path(5678, 5678, "comm", buf, sizeof(buf));
+    ASSERT_TRUE(ret == 0 && strcmp(buf, "/proc/5678/task/5678/comm") == 0);
+}
+
 /* Test pid_exists() */
 void test_pid_exists_init(void)
 {
@@ -223,6 +255,12 @@ int main(void)
     test_build_proc_path_with_file();
     test_build_proc_path_without_file();
     test_build_proc_path_small_buffer();
+
+    /* build_task_path tests */
+    test_build_task_path_with_file();
+    test_build_task_path_status();
+    test_build_task_path_small_buffer();
+    test_build_task_path_same_tid_pid();
 
     /* pid_exists tests */
     test_pid_exists_init();

@@ -84,7 +84,10 @@ int read_proc_status(pid_t pid, proc_info_t *info)
     info->pid = pid;
 
     char path_buf[256];
-    build_proc_path(pid, "status", path_buf, sizeof(path_buf));
+
+    if((build_proc_path(pid, "status", path_buf, sizeof(path_buf))) != 0){
+        return -1;
+    }
 
     FILE *file = fopen(path_buf, "r");
     if(file == NULL){
