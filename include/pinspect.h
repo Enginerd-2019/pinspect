@@ -10,6 +10,8 @@
 #include <sys/types.h>
 #include <stdbool.h>
 #include <linux/limits.h>
+#include <stdint.h>
+
 
 /* Constants */
 #define PROC_ROOT "/proc"
@@ -62,5 +64,31 @@ typedef struct {
     char name[16];          /* Thread name from comm file */
     proc_state_t state;     /* Thread state */
 } thread_info_t;
+
+/* TCP connection state */
+typedef enum {
+    TCP_ESTABLISHED = 1,
+    TCP_SYN_SENT,
+    TCP_SYN_RECV,
+    TCP_FIN_WAIT1,
+    TCP_FIN_WAIT2,
+    TCP_TIME_WAIT,
+    TCP_CLOSE,
+    TCP_CLOSE_WAIT,
+    TCP_LAST_ACK,
+    TCP_LISTEN,
+    TCP_CLOSING
+} tcp_state_t;
+
+/* Network socket info */
+typedef struct {
+    bool is_tcp;             /* true = TCP, false = UDP */
+    uint32_t local_addr;     /* Local IP in network byte order */
+    uint16_t local_port;     /* Local port in host byte order */
+    uint32_t remote_addr;    /* Remote IP in network byte order */
+    uint16_t remote_port;    /* Remote port in host byte order */
+    tcp_state_t state;       /* Connection state (meaningful for TCP) */
+    unsigned long inode;     /* Socket inode for correlation */
+} socket_info_t;
 
 #endif /* PINSPECT_H */
