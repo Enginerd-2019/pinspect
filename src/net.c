@@ -96,3 +96,38 @@ static int parse_hex_addr(const char *hex, uint32_t *ip, uint16_t *port){
 
     return 0;
 }
+
+/*
+ * Format an IP address and port as a human-readable string.
+ *
+ * Converts network byte order IP and host byte order port into
+ * a string like "192.168.1.1:8080".
+ *
+ * Parameters:
+ *   addr   - IPv4 address in network byte order
+ *   port   - Port number in host byte order
+ *   buf    - Output buffer for formatted string
+ *   buflen - Size of output buffer (recommend at least 22 bytes)
+ *
+ * Note: Uses inet_ntoa() internally, which returns a static buffer.
+ * This function is safe because we copy to the caller's buffer
+ * immediately via snprintf().
+ */
+
+ void format_ip_port(uint32_t addr, uint16_t port, char *buf, size_t buflen){
+
+    if(buf == NULL || buflen == 0){
+        return -1;
+    }
+
+    struct in_addr in;
+    in.s_addr = addr; /* addr is already in network byte order*/
+
+    /*
+     * inet_ntoa() returns a pointer to a static buffer.
+     * We must copy it immediately before another call overwrites it.
+     */
+    const char *ip_str = inet_ntoa(in);
+
+    snprintf(buf, buflen, "%s:%u", ip_str, port);
+ }
