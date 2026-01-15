@@ -47,3 +47,52 @@ const char *tcp_state_to_string(tcp_state_t state)
         default:              return "UNKNOWN";
     }
 }
+
+/*
+ * Parse hexadecimal address from /proc/net/tcp format.
+ *
+ * Parses strings like "0100007F:1F90" (127.0.0.1:8080) into
+ * separate IP and port values.
+ *
+ * Parameters:
+ *   hex  - Input string in "IIIIIIII:PPPP" format
+ *   ip   - Output for IP address (converted to network byte order)
+ *   port - Output for port number (host byte order)
+ *
+ * Returns:
+ *   0 on success
+ *  -1 on parse error or NULL input
+ *
+ * Note: The IP conversion uses htonl() because /proc stores IPs
+ * in host byte order (little-endian on x86), but we need network
+ * byte order for inet_ntoa() compatibility.
+ */
+static int parse_hex_addr(const char *hex, uint32_t *ip, uint16_t *port){
+    
+    if(hex == NULL || ip == NULL || port == NULL){
+        return -1;
+    }
+
+    unsigned int ip_hex, port_hex;
+
+    if(sscanf(hex, "%x:%x", &ip_hex, &port_hex) != 2){
+        return -1;
+    }
+
+    /*
+     * IP address handling:
+     * /proc/net/tcp stores IPs in host byte order (little-endian on x86).
+     * We need network byte order for inet_ntoa().
+     *
+     * Example on x86:
+     *   hex = "0100007F" (127.0.0.1 in little-endian)
+     *   ip_hex = 0x0100007F
+     *   After htonl: 0x7F000001 (127.0.0.1 in network order)
+     */
+    *ip = htonl(ip_hex);
+
+    /* Port is already in a usable format */
+    *port = (uint16_t)port_hex;
+
+    return 0;
+}
