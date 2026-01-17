@@ -312,3 +312,145 @@ static int parse_net_file(const char *path, bool is_tcp,
     *result_count = 0;
     return 0;
 }
+
+/*
+ * Find all network sockets belonging to a process.
+ *
+ * This is the main entry point for network connection tracking.
+ * It correlates socket inodes from the process's file descriptors
+ * with entries in /proc/net/tcp and /proc/net/udp.
+ *
+ * Algorithm:
+ *   1. Enumerate all FDs for the process using enumerate_fds()
+ *   2. Extract socket inodes from FD entries (where is_socket == true)
+ *   3. Parse /proc/net/tcp for TCP connections matching our inodes
+ *   4. Parse /proc/net/udp for UDP sockets matching our inodes
+ *   5. Merge TCP and UDP results into a single array
+ *
+ * Parameters:
+ *   pid     - Process ID to inspect
+ *   sockets - Output pointer to allocated array of socket_info_t
+ *   count   - Output pointer to number of sockets found
+ *
+ * Returns:
+ *   0 on success (sockets and count are populated)
+ *  -1 on error (errno set: ENOENT, EACCES, ENOMEM)
+ *
+ * Memory management:
+ *   Caller must free *sockets using socket_list_free().
+ *   A process with no network connections returns 0 with *count = 0.
+ *   On error, no memory is allocated (*sockets = NULL, *count = 0).
+ */
+int find_process_sockets(pid_t pid, socket_info_t **sockets, int *count)
+{
+    /* Initialize outputs */
+    *sockets = NULL;
+    *count = 0;
+
+    /* Get all file descriptors for the process */
+    fd_entry_t *fds= NULL;
+    int fd_count = 0;
+
+    if(enumerate_fds(pid, &fds, &count) != 0){
+        return -1;
+    }
+
+    /* Extract socket inodes from FD entrires */
+    unsigned long *socket_inodes = NULL;
+    int inode_count = 0;
+
+    if(fd_count > 0){
+        socket_inodes = malloc(fd_count * sizeof(unsigned long));
+        if(socket_inodes == NULL){
+            fd_entries_free(fds);
+            return -1;
+        }
+
+        for(int i = 0; i < fd_count; i++){
+            if(fds[i].is_socket){
+                socket_inodes[inode_count++] = fds[i].socket_inode;
+            }
+        }
+    }
+
+    /* Done with FD entries */
+    fd_entries_free(fds);
+
+    /* No socket - return empty success */
+    if(inode_count == 0){
+        free(socket_inodes);
+        return 0;
+    }
+
+    /* Parse TCP connections */
+    socket_info_t *tcp_sockets = NULL;
+    int tcp_count = 0;
+
+    if(parse_net_file(PROC_NET_TCP, true, socket_inodes, inode_count, &tcp_sockets, & tcp_count) != 0){
+        free(socket_inodes);
+        return -1;
+    }
+
+    /* Parse UDO sockets */
+    socket_info_t *udp_sockets = NULL;
+    int udp_count = 0;
+
+    if(parse_net_file(PROC_NET_UDP, false, socket_inodes, inode_count, &tcp_sockets, & tcp_count) != 0){
+        free(socket_inodes);
+        socket_list_free(tcp_sockets);
+        return -1;
+    }
+
+    /* Done with array */
+    free(socket_inodes);
+
+    /* Merge TCP and UDP results */
+    int total_count = tcp_count + udp_count;
+
+    if(total_count == 0){
+        socket_list_free(tcp_sockets);
+        socket_list_free(udp_sockets);
+        return 0;
+    }
+
+    socket_info_t *merged = malloc(total_count * sizeof(socket_info_t));
+    if(merged == NULL){
+        socket_list_free(tcp_sockets);
+        socket_list_free(udp_sockets);
+        return -1;
+    }
+
+
+    /* Copy TCP results */
+    if(tcp_count > 0){
+        memcpy(merged, tcp_sockets, tcp_count * sizeof(socket_info_t));
+        socket_list_free(tcp_sockets);
+    }
+
+    /* Copy UDP results */
+    if(udp_count > 0){
+        memcpy(merged + tcp_count, udp_sockets, udp_count * sizeof(socket_info_t));
+        socket_list_free(udp_sockets);
+    }
+
+    /* Memory is freed in main */
+    *sockets = merged;
+    *count = total_count;
+    return 0;
+}
+
+/*
+ * Free memory allocated by find_process_sockets().
+ *
+ * Safe to call with NULL pointer (free(NULL) is a no-op in C).
+ * Provided for API consistency with other modules (fd_entries_free,
+ * thread_info_free) and to allow future changes to internal
+ * allocation strategy without affecting callers.
+ *
+ * Parameters:
+ *   sockets - Array returned by find_process_sockets(), or NULL
+ */
+void socket_list_free(socket_info_t *sockets)
+{
+    free(sockets);  /* free(NULL) is safe */
+}
