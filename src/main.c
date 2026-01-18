@@ -13,10 +13,11 @@
 #include "proc_status.h"
 #include "proc_fd.h"
 #include "proc_task.h"
+#include "net.h"
 #include "util.h"
 
 #define PROGRAM_NAME "pinspect"
-#define VERSION "0.1.0"
+#define VERSION "1.0.0"
 
 /* Command-line options */
 static struct {
@@ -49,6 +50,46 @@ static void print_usage(void)
 static void print_version(void)
 {
     printf("%s version %s\n", PROGRAM_NAME, VERSION);
+}
+
+/*
+ * Display network connections for a process.
+ *
+ * In normal mode: Just show count
+ * In verbose mode: Show detailed list of all connections
+ */
+static void print_network_connections(pid_t pid, bool verbose)
+{
+    socket_info_t *sockets = NULL;
+    int count = 0;
+
+    if (find_process_sockets(pid, &sockets, &count) != 0) {
+        printf("\nNetwork Connections: Unable to read (permission denied)\n");
+        return;
+    }
+
+    printf("\nNetwork Connections: %d open\n", count);
+
+    if (verbose && count > 0) {
+        printf("\n  Proto  Local Address          Remote Address         State\n");
+        printf("  -----  ---------------------  ---------------------  -----------\n");
+
+        for (int i = 0; i < count; i++) {
+            char local[32], remote[32];
+            format_ip_port(sockets[i].local_addr, sockets[i].local_port,
+                          local, sizeof(local));
+            format_ip_port(sockets[i].remote_addr, sockets[i].remote_port,
+                          remote, sizeof(remote));
+
+            printf("  %-5s  %-21s  %-21s  %s\n",
+                   sockets[i].is_tcp ? "TCP" : "UDP",
+                   local,
+                   remote,
+                   tcp_state_to_string(sockets[i].state));
+        }
+    }
+
+    socket_list_free(sockets);
 }
 
 /*
@@ -228,9 +269,16 @@ int main(int argc, char *argv[])
         return (errno == ENOENT) ? 2 : 3;
     }
 
-    print_process_info(&info);
-    print_file_descriptors(options.pid, options.verbose);
-    print_threads(options.pid, options.verbose);
+    if (options.network_only) {
+        /* -n flag: Show only network connections */
+        print_network_connections(options.pid, options.verbose);
+    } else {
+        /* Normal mode: Show all information */
+        print_process_info(&info);
+        print_file_descriptors(options.pid, options.verbose);
+        print_threads(options.pid, options.verbose);
+        print_network_connections(options.pid, options.verbose);
+    }
 
     return 0;
 }

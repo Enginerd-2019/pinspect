@@ -67,7 +67,6 @@ const char *tcp_state_to_string(tcp_state_t state)
  * in host byte order (little-endian on x86), but we need network
  * byte order for inet_ntoa() compatibility.
  */
-// __attribute__((unused))
 static int parse_hex_addr(const char *hex, uint32_t *ip, uint16_t *port){
     
     if(hex == NULL || ip == NULL || port == NULL){
@@ -272,8 +271,9 @@ static int parse_net_file(const char *path, bool is_tcp,
         array[count].is_tcp = is_tcp;
         array[count].local_addr = local_ip;
         array[count].local_port = local_port;
-        array[count].remote_addr = remote_addr;
+        array[count].remote_addr = remote_ip;
         array[count].remote_port = remote_port;
+        array[count].state = (tcp_state_t)state;
         array[count].inode = inode;
         count++;
 
@@ -309,7 +309,7 @@ static int parse_net_file(const char *path, bool is_tcp,
     }
 
     *results = array;
-    *result_count = 0;
+    *result_count = count;
     return 0;
 }
 
@@ -351,7 +351,7 @@ int find_process_sockets(pid_t pid, socket_info_t **sockets, int *count)
     fd_entry_t *fds= NULL;
     int fd_count = 0;
 
-    if(enumerate_fds(pid, &fds, &count) != 0){
+    if(enumerate_fds(pid, &fds, &fd_count) != 0){
         return -1;
     }
 
@@ -395,7 +395,7 @@ int find_process_sockets(pid_t pid, socket_info_t **sockets, int *count)
     socket_info_t *udp_sockets = NULL;
     int udp_count = 0;
 
-    if(parse_net_file(PROC_NET_UDP, false, socket_inodes, inode_count, &tcp_sockets, & tcp_count) != 0){
+    if(parse_net_file(PROC_NET_UDP, false, socket_inodes, inode_count, &udp_sockets, &udp_count) != 0){
         free(socket_inodes);
         socket_list_free(tcp_sockets);
         return -1;
