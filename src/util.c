@@ -16,10 +16,6 @@
 
 #define BASE 10
 
-/*
- * Construct path to /proc/<pid> or /proc/<pid>/<file>.
- * Returns -1 if the buffer is too small for the resulting path.
- */
 int build_proc_path(pid_t pid, const char *file, char *out_path, size_t out_path_len)
 {
     int ret;
@@ -38,13 +34,6 @@ int build_proc_path(pid_t pid, const char *file, char *out_path, size_t out_path
 }
 
 
-/*
- * Build path to /proc/<pid>/task/<tid>/<file>.
- *
- * Returns:
- *   0 on success
- *  -1 if path would overflow buffer
- */
 int build_task_path(pid_t pid, pid_t tid, const char *file,
                     char *buf, size_t buflen)
 {
@@ -56,10 +45,6 @@ int build_task_path(pid_t pid, pid_t tid, const char *file,
     return 0;
 }
 
-/*
- * Check if /proc/<pid> exists using access().
- * Note: Process may exit between this check and subsequent operations.
- */
 bool pid_exists(pid_t pid)
 {
     char buf[256];
@@ -71,10 +56,6 @@ bool pid_exists(pid_t pid)
     return access(buf, F_OK) == 0;
 }
 
-/*
- * Parse and validate a PID string.
- * Rejects NULL, empty, non-numeric, negative, and zero values.
- */
 pid_t parse_pid(const char *str)
 {
     if (str == NULL || *str == '\0') {
@@ -121,10 +102,6 @@ const char *state_to_string(proc_state_t state)
     }
 }
 
-/*
- * Map single-character state codes from /proc/<pid>/status
- * to proc_state_t enum values.
- */
 proc_state_t char_to_state(char c)
 {
     switch (c) {

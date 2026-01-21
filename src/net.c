@@ -23,13 +23,6 @@
 #define PROC_NET_TCP "/proc/net/tcp"
 #define PROC_NET_UDP "/proc/net/udp"
 
-/*
- * Convert TCP state enum to human-readable string.
- *
- * Returns a static string for each known state value.
- * Returns "UNKNOWN" for unrecognized values.
- * Never returns NULL.
- */
 const char *tcp_state_to_string(tcp_state_t state)
 {
     switch (state) {
@@ -49,23 +42,8 @@ const char *tcp_state_to_string(tcp_state_t state)
 }
 
 /*
- * Parse hexadecimal address from /proc/net/tcp format.
- *
- * Parses strings like "0100007F:1F90" (127.0.0.1:8080) into
- * separate IP and port values.
- *
- * Parameters:
- *   hex  - Input string in "IIIIIIII:PPPP" format
- *   ip   - Output for IP address (converted to network byte order)
- *   port - Output for port number (host byte order)
- *
- * Returns:
- *   0 on success
- *  -1 on parse error or NULL input
- *
- * Note: The IP conversion uses htonl() because /proc stores IPs
- * in host byte order (little-endian on x86), but we need network
- * byte order for inet_ntoa() compatibility.
+ * Parse hex address like "0100007F:1F90" into IP and port.
+ * Returns 0 on success, -1 on error.
  */
 static int parse_hex_addr(const char *hex, uint32_t *ip, uint16_t *port){
     
@@ -97,23 +75,7 @@ static int parse_hex_addr(const char *hex, uint32_t *ip, uint16_t *port){
     return 0;
 }
 
-/*
- * Format an IP address and port as a human-readable string.
- *
- * Converts network byte order IP and host byte order port into
- * a string like "192.168.1.1:8080".
- *
- * Parameters:
- *   addr   - IPv4 address in network byte order
- *   port   - Port number in host byte order
- *   buf    - Output buffer for formatted string
- *   buflen - Size of output buffer (recommend at least 22 bytes)
- *
- * Note: Uses inet_ntoa() internally, which returns a static buffer.
- * This function is safe because we copy to the caller's buffer
- * immediately via snprintf().
- */
- void format_ip_port(uint32_t addr, uint16_t port, char *buf, size_t buflen){
+void format_ip_port(uint32_t addr, uint16_t port, char *buf, size_t buflen){
 
     if(buf == NULL || buflen == 0){
         return;
@@ -131,25 +93,7 @@ static int parse_hex_addr(const char *hex, uint32_t *ip, uint16_t *port){
     snprintf(buf, buflen, "%s:%u", ip_str, port);
  }
 
- /*
- * Check if an inode exists in a set of target inodes.
- *
- * Used to determine if a network connection belongs to our target
- * process by matching socket inodes from /proc/net/tcp against
- * inodes extracted from the process's file descriptors.
- *
- * Parameters:
- *   inode    - The inode to search for
- *   set      - Array of target inodes to match against
- *   set_size - Number of elements in the set array
- *
- * Returns:
- *   true if inode is found in set
- *   false if not found, or if set is NULL/empty
- *
- * Note: Uses linear search O(n). Sufficient for typical socket
- * counts (< 100). For high-performance needs, consider a hash set.
- */
+/* Check if inode exists in the set (linear search). */
 static bool inode_in_set(unsigned long inode, unsigned long *set, int set_size)
 {
     // No set to check
@@ -170,30 +114,7 @@ static bool inode_in_set(unsigned long inode, unsigned long *set, int set_size)
 
 /*
  * Parse /proc/net/tcp or /proc/net/udp for matching socket inodes.
- *
- * Reads the specified network statistics file line by line, extracting
- * connection information for any entries whose inode matches our target
- * set (sockets owned by the process we're inspecting).
- *
- * Parameters:
- *   path          - Path to network file ("/proc/net/tcp" or "/proc/net/udp")
- *   is_tcp        - true for TCP connections, false for UDP
- *   target_inodes - Array of socket inodes belonging to our target process
- *   inode_count   - Number of inodes in target_inodes array
- *   results       - Output pointer to allocated array of socket_info_t
- *   result_count  - Output pointer to number of matching connections
- *
- * Returns:
- *   0 on success (results may be empty if no matches)
- *  -1 on error (file open failure, memory allocation failure)
- *
- * Memory management:
- *   Caller must free *results using socket_list_free().
- *   On error, no memory is allocated.
- *
- * File format parsed (columns):
- *   sl local_address rem_address st tx:rx tr:tm retrnsmt uid timeout inode
- *   We extract: local_address, rem_address, st (state), inode
+ * Returns 0 on success, -1 on error.
  */
 static int parse_net_file(const char *path, bool is_tcp,
                           unsigned long *target_inodes, int inode_count,
@@ -313,34 +234,6 @@ static int parse_net_file(const char *path, bool is_tcp,
     return 0;
 }
 
-/*
- * Find all network sockets belonging to a process.
- *
- * This is the main entry point for network connection tracking.
- * It correlates socket inodes from the process's file descriptors
- * with entries in /proc/net/tcp and /proc/net/udp.
- *
- * Algorithm:
- *   1. Enumerate all FDs for the process using enumerate_fds()
- *   2. Extract socket inodes from FD entries (where is_socket == true)
- *   3. Parse /proc/net/tcp for TCP connections matching our inodes
- *   4. Parse /proc/net/udp for UDP sockets matching our inodes
- *   5. Merge TCP and UDP results into a single array
- *
- * Parameters:
- *   pid     - Process ID to inspect
- *   sockets - Output pointer to allocated array of socket_info_t
- *   count   - Output pointer to number of sockets found
- *
- * Returns:
- *   0 on success (sockets and count are populated)
- *  -1 on error (errno set: ENOENT, EACCES, ENOMEM)
- *
- * Memory management:
- *   Caller must free *sockets using socket_list_free().
- *   A process with no network connections returns 0 with *count = 0.
- *   On error, no memory is allocated (*sockets = NULL, *count = 0).
- */
 int find_process_sockets(pid_t pid, socket_info_t **sockets, int *count)
 {
     /* Initialize outputs */
@@ -439,17 +332,6 @@ int find_process_sockets(pid_t pid, socket_info_t **sockets, int *count)
     return 0;
 }
 
-/*
- * Free memory allocated by find_process_sockets().
- *
- * Safe to call with NULL pointer (free(NULL) is a no-op in C).
- * Provided for API consistency with other modules (fd_entries_free,
- * thread_info_free) and to allow future changes to internal
- * allocation strategy without affecting callers.
- *
- * Parameters:
- *   sockets - Array returned by find_process_sockets(), or NULL
- */
 void socket_list_free(socket_info_t *sockets)
 {
     free(sockets);  /* free(NULL) is safe */

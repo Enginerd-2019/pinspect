@@ -14,25 +14,12 @@
 /*
  * Enumerate all file descriptors for a process.
  *
- * Reads /proc/<pid>/fd/ directory and resolves each symlink to determine
- * what the file descriptor points to.
+ * Reads /proc/<pid>/fd/ and resolves each symlink to determine what the
+ * descriptor points to. Returns heap-allocated array via entries parameter.
+ * Caller must free with fd_entries_free().
  *
- * Parameters:
- *   pid       - Process ID to inspect
- *   entries   - Output pointer to array of fd_entry_t (heap-allocated)
- *   count     - Output parameter for number of entries in array
- *
- * Returns 0 on success, -1 on error:
- *   ENOENT - Process doesn't exist or /proc/<pid>/fd/ not found
- *   EACCES - Permission denied (common for other users' processes)
- *   ENOMEM - Memory allocation failed
- *
- * On success, caller must free the returned array with fd_entries_free().
- * On error, *entries is set to NULL and *count is set to 0.
- *
- * Note: The FD directory may change while we're reading it (process can
- * open/close files). We read a snapshot and ignore readdir/readlink errors
- * for individual entries that disappear mid-read.
+ * Returns 0 on success, -1 on error (ENOENT if process not found, EACCES
+ * if permission denied, ENOMEM if allocation fails).
  */
 int enumerate_fds(pid_t pid, fd_entry_t **entries, int *count);
 
@@ -44,17 +31,10 @@ int enumerate_fds(pid_t pid, fd_entry_t **entries, int *count);
 void fd_entries_free(fd_entry_t *entries);
 
 /*
- * Parse socket inode from symlink target.
+ * Parse socket inode from symlink target string.
  *
- * Socket symlinks have format "socket:[12345]" where 12345 is the inode.
- * This function extracts the inode number.
- *
- * Parameters:
- *   target - Symlink target string (e.g., "socket:[67890]")
- *   inode  - Output pointer for extracted inode number
- *
- * Returns true if target is a socket and inode was extracted.
- * Returns false if target is not a socket format.
+ * Extracts inode from "socket:[12345]" format. Returns true if target is a
+ * socket and inode was extracted, false otherwise.
  */
 bool parse_socket_inode(const char *target, unsigned long *inode);
 

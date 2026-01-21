@@ -13,50 +13,32 @@
 #include "pinspect.h"
 
 /*
- * Build a path to a file within /proc/<pid>/.
+ * Build path to /proc/<pid>/ or /proc/<pid>/<file>.
  *
- * Constructs paths like "/proc/1234/status" or "/proc/1234/fd".
- *
- * Returns 0 on success, -1 if buffer too small.
- * Does NOT check if path exists.
+ * Returns 0 on success, -1 if buffer too small. Does not check if path exists.
  */
 int build_proc_path(pid_t pid, const char *file, char *out_path, size_t out_path_len);
 
 /*
  * Build path to /proc/<pid>/task/<tid>/<file>.
  *
- * Parameters:
- *   pid     - Process ID
- *   tid     - Thread ID
- *   file    - File name (e.g., "comm", "status")
- *   buf     - Output buffer
- *   buflen  - Size of output buffer
- *
- * Returns:
- *   0 on success
- *  -1 if path would overflow buffer
- *
- * Example:
- *   char path[256];
- *   build_task_path(1234, 1235, "comm", path, sizeof(path));
- *   // path = "/proc/1234/task/1235/comm"
+ * Returns 0 on success, -1 if path would overflow buffer.
  */
 int build_task_path(pid_t pid, pid_t tid, const char *file,
                     char *buf, size_t buflen);
 
 /*
- * Check if a PID corresponds to an existing process.
+ * Check if /proc/<pid> exists.
  *
- * Returns true if /proc/<pid> exists and is accessible.
- * Note: Process may exit between check and subsequent operations.
+ * Returns true if accessible. Process may exit between check and use.
  */
 bool pid_exists(pid_t pid);
 
 /*
- * Validate that a string represents a valid PID.
+ * Parse and validate a PID string.
  *
- * Returns the parsed PID on success, -1 on error.
- * Rejects negative numbers, non-numeric input, and overflow.
+ * Returns parsed PID on success, -1 if invalid (non-numeric, negative, or
+ * overflow).
  */
 pid_t parse_pid(const char *str);
 

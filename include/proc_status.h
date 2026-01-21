@@ -13,18 +13,11 @@
 /*
  * Read process info from /proc/<pid>/status.
  *
- * Populates the proc_info_t struct with:
- * - Process name, state, PID
- * - Real and effective UID/GID
- * - Memory stats (VmSize, VmRSS, VmPeak)
- * - Thread count
+ * Populates proc_info_t with name, state, UID/GID, memory stats, and thread
+ * count. Zombie and kernel thread processes have no memory fields (set to 0).
  *
- * Returns 0 on success, -1 on error.
- * On ENOENT (process exited), returns -1 with errno set.
- * On EACCES (permission denied), returns partial info where possible.
- *
- * Note: Zombie and kernel thread processes have no Vm* fields;
- * memory values will be set to 0 for these processes.
+ * Returns 0 on success, -1 on error (ENOENT if process exited, EACCES if
+ * permission denied).
  */
 int read_proc_status(pid_t pid, proc_info_t *info);
 

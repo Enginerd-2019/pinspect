@@ -20,10 +20,7 @@
 /* Initial capacity for FD array (will grow if needed) */
 #define INITIAL_FD_CAPACITY 64
 
-/*
- * Check if a directory entry name is numeric (represents an FD).
- * Returns true if name consists only of digits.
- */
+/* Check if directory entry is numeric (filter out "." and ".."). */
 static bool is_numeric(const char *name)
 {
     if (name == NULL || *name == '\0') {
@@ -46,10 +43,7 @@ static bool is_numeric(const char *name)
     return true;
 }
 
-/*
- * Resolve a file descriptor symlink to its target.
- * Returns 0 on success, -1 on error (e.g., ENOENT if FD closed mid-read).
- */
+/* Resolve FD symlink to target. Returns 0 on success, -1 on error. */
 static int resolve_fd_target(const char *path, char *target, size_t size)
 {
     ssize_t len = readlink(path, target, size - 1);
@@ -64,10 +58,7 @@ static int resolve_fd_target(const char *path, char *target, size_t size)
 
 }
 
-/*
- * Parse an fd_entry_t from a directory entry and its resolved target.
- * Populates fd number, target path, and socket detection fields.
- */
+/* Parse FD entry from directory name and resolved symlink target. */
 static void parse_fd_entry(const char *name, const char *target,
                            fd_entry_t *entry)
 {
@@ -84,11 +75,6 @@ static void parse_fd_entry(const char *name, const char *target,
      }
 }
 
-/*
- * Enumerate all file descriptors for a process.
- * Returns 0 on success with heap-allocated entries array, -1 on error.
- * Caller must free with fd_entries_free().
- */
 int enumerate_fds(pid_t pid, fd_entry_t **entries, int *count)
 {
     *entries = NULL;

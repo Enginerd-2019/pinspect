@@ -14,49 +14,17 @@
 /*
  * Enumerate all threads for a process.
  *
- * Reads /proc/<pid>/task/ directory and collects information about
- * each thread including TID, name, and state.
+ * Reads /proc/<pid>/task/ and collects TID, name, and state for each thread.
+ * Returns heap-allocated array via threads parameter. Caller must free with
+ * thread_info_free().
  *
- * Parameters:
- *   pid     - Process ID to inspect
- *   threads - Output pointer to allocated array of thread_info_t
- *   count   - Output pointer to number of entries in array
- *
- * Returns:
- *   0 on success (threads and count are populated)
- *  -1 on error (errno is set: ENOENT, EACCES, ENOMEM)
- *
- * Memory management:
- *   Caller must free the returned array using thread_info_free().
- *   If this function returns -1, no memory is allocated.
- *
- * Notes:
- *   - A single-threaded process returns 1 entry (the main thread)
- *   - The main thread's TID equals the PID
- *   - Thread list may change between call and use (TOCTOU)
- *
- * Example:
- *   thread_info_t *threads;
- *   int count;
- *   if (enumerate_threads(1234, &threads, &count) == 0) {
- *       for (int i = 0; i < count; i++) {
- *           printf("TID %d: %s (%s)\n",
- *                  threads[i].tid,
- *                  threads[i].name,
- *                  state_to_string(threads[i].state));
- *       }
- *       thread_info_free(threads);
- *   }
+ * Returns 0 on success, -1 on error (ENOENT if process not found, EACCES
+ * if permission denied, ENOMEM if allocation fails).
  */
 int enumerate_threads(pid_t pid, thread_info_t **threads, int *count);
 
 /*
- * Free memory allocated by enumerate_threads().
- *
- * Safe to call with NULL pointer.
- *
- * Parameters:
- *   threads - Array returned by enumerate_threads(), or NULL
+ * Free memory allocated by enumerate_threads(). Safe to call with NULL.
  */
 void thread_info_free(thread_info_t *threads);
 

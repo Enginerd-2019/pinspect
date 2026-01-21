@@ -17,12 +17,7 @@
 
 /*
  * Parse a single line from /proc/<pid>/status.
- *
- * Matches the field name and extracts the value into proc_info_t.
- * Returns 0 if line was parsed, 1 if line didn't match any known field.
- *
- * Note: Zombie and kernel thread processes lack Vm* fields - this is not
- * treated as an error, and those fields remain zero-initialized.
+ * Returns 0 if line matched a known field, 1 if not recognized.
  */
 static int parse_status_line(const char *line, proc_info_t *info)
 {
@@ -71,13 +66,7 @@ static int parse_status_line(const char *line, proc_info_t *info)
     return 1;
 }
 
-/*
- * Read and parse /proc/<pid>/status file.
- *
- * Returns 0 on success, -1 on error with errno set:
- * - ENOENT: Process doesn't exist or exited during read
- * - EACCES: Permission denied (common for other users' processes)
- */
+
 int read_proc_status(pid_t pid, proc_info_t *info)
 {
     memset(info, 0, sizeof(*info));

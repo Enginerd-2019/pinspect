@@ -20,12 +20,7 @@
 /* Initial capacity for thread array (will grow if needed) */
 #define INITIAL_THREAD_CAPACITY 32
 
-/*
- * Check if a directory entry name is numeric (represents a TID).
- *
- * /proc/<pid>/task/ contains numeric entries (TIDs) plus "." and "..".
- * We only want the numeric ones.
- */
+/* Check if directory entry is numeric (filter out "." and ".."). */
 static bool is_numeric(const char *name)
 {
     if(name == NULL || *name == '\0'){
@@ -47,12 +42,7 @@ static bool is_numeric(const char *name)
     return true;
 }
 
-/*
- * Read thread name from /proc/<pid>/task/<tid>/comm.
- *
- * The comm file contains the thread's name (up to 15 characters).
- * Returns 0 on success, -1 on error.
- */
+/* Read thread name from comm file. Returns 0 on success, -1 on error. */
 static int read_thread_name(pid_t pid, pid_t tid, char *name, size_t size)
 {
     char path[PATH_MAX];
@@ -90,12 +80,7 @@ static int read_thread_name(pid_t pid, pid_t tid, char *name, size_t size)
     return 0;
 }
 
-/*
- * Read thread state from /proc/<pid>/task/<tid>/status.
- *
- * Parses the "State:" line to get the thread's current state.
- * Returns PROC_STATE_UNKNOWN on error.
- */
+/* Read thread state from status file. Returns PROC_STATE_UNKNOWN on error. */
 static proc_state_t read_thread_state(pid_t pid, pid_t tid)
 {
     char path[PATH_MAX];
@@ -125,12 +110,6 @@ static proc_state_t read_thread_state(pid_t pid, pid_t tid)
     return state;
 }
 
-/*
- * Enumerate all threads for a process.
- *
- * Returns 0 on success with heap-allocated threads array, -1 on error.
- * Caller must free with thread_info_free().
- */
 int enumerate_threads(pid_t pid, thread_info_t **threads, int *count)
 {
     *threads = NULL;
@@ -211,9 +190,6 @@ int enumerate_threads(pid_t pid, thread_info_t **threads, int *count)
     return 0;
 }
 
-/*
- * Free memory allocated by enumerate_threads().
- */
 void thread_info_free(thread_info_t *threads)
 {
     free(threads);
