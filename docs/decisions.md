@@ -144,3 +144,168 @@ bool parse_socket_inode(const char *target, unsigned long *inode)
 - Consistent error handling and buffer safety
 - Avoids complicating `build_proc_path()` signature
 - Example in header documents exact output format
+
+---
+
+## 2026-01-12: Socket Detection via Pattern Matching
+
+**Decision:** Use `sscanf()` with pattern `"socket:[%lu]"` to detect and extract socket inodes.
+
+**Context:** File descriptor symlinks pointing to sockets have format `socket:[12345]` where the number is the inode.
+
+**Options Considered:**
+1. Manual string parsing (check prefix, find brackets, parse number)
+2. Regular expressions (overkill, requires regex library)
+3. `sscanf()` pattern matching
+
+**Choice:** Option 3 - `sscanf()` pattern matching.
+
+**Rationale:**
+- Simple one-liner: `sscanf(target, "socket:[%lu]", inode) == 1`
+- Automatically validates format and extracts inode in one operation
+- Type-safe (parses as unsigned long)
+- No manual string manipulation needed
+- Returns 1 on match, 0 on non-match (easy boolean conversion)
+
+**Implementation:**
+```c
+bool parse_socket_inode(const char *target, unsigned long *inode)
+{
+    if (target == NULL) {
+        return false;
+    }
+    return sscanf(target, "socket:[%lu]", inode) == 1;
+}
+```
+
+---
+
+## 2026-01-13: Network Connection Correlation via Inode Matching
+
+**Decision:** Correlate process sockets with network connections by matching socket inodes.
+
+**Context:** Need to identify which TCP/UDP connections belong to a specific process.
+
+**Options Considered:**
+1. Parse `/proc/<pid>/net/tcp` (per-process view, but doesn't exist for all kernels)
+2. Match by port numbers (unreliable - ports can be reused, multiple processes)
+3. Match by socket inode numbers (unique kernel identifier)
+
+**Choice:** Option 3 - inode matching.
+
+**Rationale:**
+- Socket inodes are unique kernel identifiers
+- Process FDs show `socket:[INODE]` format
+- `/proc/net/tcp` includes inode column for each connection
+- One-to-one correspondence: each socket has exactly one inode
+- Works reliably across all connection states (ESTABLISHED, LISTEN, etc.)
+- Demonstrates how different `/proc` files can be correlated
+
+**Algorithm:**
+1. Enumerate process FDs with `enumerate_fds()`
+2. Extract socket inodes from entries where `is_socket == true`
+3. Parse `/proc/net/tcp` and `/proc/net/udp`
+4. Keep only rows where inode matches our set
+5. Return array of matching connections
+
+---
+
+## 2026-01-14: Network Byte Order for IP Addresses
+
+**Decision:** Store IP addresses in network byte order (big-endian) in `socket_info_t`.
+
+**Context:** `/proc/net/tcp` stores IPs in host byte order (little-endian on x86), but network APIs expect network byte order.
+
+**Options Considered:**
+1. Store in host byte order, convert when displaying
+2. Store in network byte order (ready for `inet_ntoa()`)
+3. Store as string (wasteful, loses type safety)
+
+**Choice:** Option 2 - network byte order.
+
+**Rationale:**
+- Directly compatible with `struct in_addr` and `inet_ntoa()`
+- No conversion needed at display time
+- Matches standard socket API conventions
+- Easier to extend for future network operations
+- Convert once during parsing with `htonl()`, use many times
+
+**Implementation:**
+```c
+// Parse from /proc/net/tcp (hex is in host order on x86)
+unsigned int ip_hex;
+sscanf(hex, "%X:%X", &ip_hex, &port_hex);
+*ip = htonl(ip_hex);  // Convert to network byte order
+
+// Display (no conversion needed)
+struct in_addr addr;
+addr.s_addr = socket_info.local_addr;  // Already in network order
+char *ip_str = inet_ntoa(addr);
+```
+
+---
+
+## 2026-01-15: Linear Search for Inode Matching
+
+**Decision:** Use simple linear search to check if socket inode matches target set.
+
+**Context:** Need to determine if a `/proc/net/tcp` entry belongs to our process.
+
+**Options Considered:**
+1. Linear search - O(n) lookup
+2. Hash set - O(1) lookup
+3. Sorted array with binary search - O(log n) lookup
+
+**Choice:** Option 1 - linear search.
+
+**Rationale:**
+- Most processes have few sockets (< 100)
+- Linear search is simple and sufficient for small n
+- No need for hash table complexity or sorting overhead
+- Can optimize later if profiling shows it's a bottleneck
+- Keeps code simple and readable
+
+**Implementation:**
+```c
+static bool inode_in_set(unsigned long inode,
+                         unsigned long *set, int set_size)
+{
+    for (int i = 0; i < set_size; i++) {
+        if (set[i] == inode) {
+            return true;
+        }
+    }
+    return false;
+}
+```
+
+---
+
+## 2026-01-16: Skip Unwanted Fields with sscanf %*
+
+**Decision:** Use `%*` format specifiers to skip unneeded columns in `/proc/net/tcp`.
+
+**Context:** `/proc/net/tcp` has 11+ columns but we only need 4 (local_addr, rem_addr, state, inode).
+
+**Options Considered:**
+1. Parse all fields into variables (wasteful)
+2. Use multiple `sscanf()` calls to extract specific fields
+3. Use `%*` to skip unwanted fields in single `sscanf()`
+
+**Choice:** Option 3 - `%*` format specifiers.
+
+**Rationale:**
+- Single `sscanf()` call handles entire line
+- `%*s` and `%*d` read and discard values
+- No unnecessary variable allocations
+- Self-documenting (shows which fields we ignore)
+- Efficient - parser skips directly to next field
+
+**Implementation:**
+```c
+sscanf(line,
+    " %u: %63s %63s %X %*s %*s %*s %u %*d %lu",
+    //                    ^^^  ^^^  ^^^    ^^^
+    //                    Skip tx:rx, timers, retrans, timeout
+    &slot, local_addr, remote_addr, &state, &uid, &inode);
+```

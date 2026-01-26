@@ -99,6 +99,28 @@ Tests for file descriptor enumeration in `src/proc_fd.c`:
 
 **Total: 12 tests**
 
+### test_net.c
+Tests for network connection parsing in `src/net.c`:
+
+- **tcp_state_to_string()** - 3 tests
+  - ESTABLISHED state
+  - LISTEN state
+  - Unknown/invalid state handling
+
+- **format_ip_port()** - 3 tests
+  - Localhost IP formatting (127.0.0.1:8080)
+  - Any address formatting (0.0.0.0:22)
+  - NULL buffer safety
+
+- **find_process_sockets()** - 2 tests
+  - Current process socket enumeration
+  - Non-existent PID error handling
+
+- **socket_list_free()** - 1 test
+  - NULL pointer safety
+
+**Total: 9 tests**
+
 ## Test Output
 
 Tests use color-coded output:
@@ -114,9 +136,9 @@ Testing parse_pid with NULL... [PASS]
 ...
 
 === Test Results ===
-Passed: 25
+Passed: 63
 Failed: 0
-Total:  25
+Total:  63
 ```
 
 ## Adding New Tests
@@ -156,12 +178,6 @@ This catches:
 - Buffer overflows
 - Use-after-free
 - Undefined behavior
-
-## Future Tests
-
-When implementing Milestone 3 (Network Connections), add:
-
-- `test_net.c` - Network connection parsing tests
 
 ## Notes
 
