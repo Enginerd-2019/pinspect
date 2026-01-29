@@ -107,7 +107,7 @@ static int parse_args(int argc, char *argv[])
     };
 
     int opt;
-    while((opt = getopt_long(argc, argv, "vnhV", long_options, NULL)) != -1){
+    while ((opt = getopt_long(argc, argv, "vnhV", long_options, NULL)) != -1) {
         switch (opt) {
         case 'v':
             options.verbose = true;
@@ -138,7 +138,7 @@ static int parse_args(int argc, char *argv[])
     }
 
     options.pid = parse_pid(argv[optind]);
-    if(options.pid == -1){
+    if (options.pid == -1) {
         fprintf(stderr, "Invalid PID: %s\n", argv[optind]);
         return -1;
     }
@@ -164,7 +164,7 @@ static void print_process_info(const proc_info_t *info)
 
 /*
  * Display file descriptor information for a process.
- * 
+ *
  * In normal mode: Just show count
  * In verbose mode: Show detailed list of all FDs
  */
@@ -172,31 +172,28 @@ static void print_file_descriptors(pid_t pid, bool verbose)
 {
     fd_entry_t *fds = NULL;
     int count = 0;
-    
-    // Enumerate file descriptors
+
     if (enumerate_fds(pid, &fds, &count) != 0) {
-        // Permission denied or process exited - graceful degradation
+        /* Graceful degradation for permission errors or race conditions */
         printf("\nFile Descriptors: Unable to read (permission denied)\n");
         return;
     }
-    
-    // Always show the count
+
     printf("\nFile Descriptors: %d open\n", count);
-    
-    // In verbose mode, show each FD
+
     if (verbose && count > 0) {
         printf("\n  FD    Type      Target\n");
         printf("  ----  --------  ----------------------------------------\n");
-        
+
         for (int i = 0; i < count; i++) {
             const char *type = fds[i].is_socket ? "socket" : "file";
-            printf("  %-4d  %-8s  %s\n", 
-                   fds[i].fd, 
-                   type, 
+            printf("  %-4d  %-8s  %s\n",
+                   fds[i].fd,
+                   type,
                    fds[i].target);
         }
     }
-    
+
     fd_entries_free(fds);
 }
 
@@ -270,10 +267,8 @@ int main(int argc, char *argv[])
     }
 
     if (options.network_only) {
-        /* -n flag: Show only network connections */
         print_network_connections(options.pid, options.verbose);
     } else {
-        /* Normal mode: Show all information */
         print_process_info(&info);
         print_file_descriptors(options.pid, options.verbose);
         print_threads(options.pid, options.verbose);

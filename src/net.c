@@ -45,15 +45,15 @@ const char *tcp_state_to_string(tcp_state_t state)
  * Parse hex address like "0100007F:1F90" into IP and port.
  * Returns 0 on success, -1 on error.
  */
-static int parse_hex_addr(const char *hex, uint32_t *ip, uint16_t *port){
-    
-    if(hex == NULL || ip == NULL || port == NULL){
+static int parse_hex_addr(const char *hex, uint32_t *ip, uint16_t *port)
+{
+    if (hex == NULL || ip == NULL || port == NULL) {
         return -1;
     }
 
     unsigned int ip_hex, port_hex;
 
-    if(sscanf(hex, "%x:%x", &ip_hex, &port_hex) != 2){
+    if (sscanf(hex, "%x:%x", &ip_hex, &port_hex) != 2) {
         return -1;
     }
 
@@ -68,21 +68,22 @@ static int parse_hex_addr(const char *hex, uint32_t *ip, uint16_t *port){
      *   After htonl: 0x7F000001 (127.0.0.1 in network order)
      */
     *ip = htonl(ip_hex);
-
-    /* Port is already in a usable format */
     *port = (uint16_t)port_hex;
 
     return 0;
 }
 
-void format_ip_port(uint32_t addr, uint16_t port, char *buf, size_t buflen){
-
-    if(buf == NULL || buflen == 0){
+/*
+ * Format IP address and port as "192.168.1.1:8080" string.
+ */
+void format_ip_port(uint32_t addr, uint16_t port, char *buf, size_t buflen)
+{
+    if (buf == NULL || buflen == 0) {
         return;
     }
 
     struct in_addr in;
-    in.s_addr = addr; /* addr is already in network byte order*/
+    in.s_addr = addr;
 
     /*
      * inet_ntoa() returns a pointer to a static buffer.
@@ -91,25 +92,25 @@ void format_ip_port(uint32_t addr, uint16_t port, char *buf, size_t buflen){
     const char *ip_str = inet_ntoa(in);
 
     snprintf(buf, buflen, "%s:%u", ip_str, port);
- }
+}
 
-/* Check if inode exists in the set (linear search). */
+/*
+ * Check if inode exists in the set (linear search).
+ * Used for correlating socket FDs with /proc/net entries.
+ */
 static bool inode_in_set(unsigned long inode, unsigned long *set, int set_size)
 {
-    // No set to check
-    if(set == NULL || set_size == 0){
+    if (set == NULL || set_size == 0) {
         return false;
     }
 
-    for(int i = 0; i < set_size; i++){
-        if(set[i] == inode){
+    for (int i = 0; i < set_size; i++) {
+        if (set[i] == inode) {
             return true;
         }
     }
 
-    // If you made it here, inode was not in the set
     return false;
-
 }
 
 /*
@@ -120,24 +121,21 @@ static int parse_net_file(const char *path, bool is_tcp,
                           unsigned long *target_inodes, int inode_count,
                           socket_info_t **results, int *result_count)
 {
-    /* Initialize outpurts */
     *results = NULL;
     *result_count = 0;
 
-    /* No inodes match. Nothing to do*/
-    if(target_inodes == NULL || inode_count == 0){
+    if (target_inodes == NULL || inode_count == 0) {
         return 0;
     }
 
     FILE *fp = fopen(path, "r");
-    if(fp == NULL){
+    if (fp == NULL) {
         return -1;
     }
 
-    /* Allocate initial array (may need to be resized later) */
     int capacity = INITIAL_SOCKET_CAPACITY;
     socket_info_t *array = malloc(capacity * sizeof(socket_info_t));
-    if(array == NULL){
+    if (array == NULL) {
         fclose(fp);
         return -1;
     }
@@ -145,15 +143,13 @@ static int parse_net_file(const char *path, bool is_tcp,
     int count = 0;
     char line[512];
 
-    /* Skip the header line */
-    if(fgets(line, sizeof(line), fp) == NULL){
+    if (fgets(line, sizeof(line), fp) == NULL) {
         free(array);
         fclose(fp);
-        return 0; /* The file was empty, not an error */
+        return 0;
     }
 
-    /* Parse each connection line */
-    while(fgets(line, sizeof(line), fp) != NULL){
+    while (fgets(line, sizeof(line), fp) != NULL) {
         unsigned int slot;
         char local_addr[64], remote_addr[64];
         unsigned int state;
@@ -161,34 +157,31 @@ static int parse_net_file(const char *path, bool is_tcp,
         unsigned long inode;
 
         /*
-         * Parse the line. Format:
-         * sl local_address rem_address st tx:rx tr:tm retrnsmt uid timeout inode ...
-         *
-         * We only need: local_address, rem_address, st, inode
+         * /proc/net/tcp format:
+         * sl local_address rem_address st tx:rx tr:tm retrnsmt uid timeout inode
+         * We extract: local_address, rem_address, st (state), inode
          */
         int matched = sscanf(line,
                             " %u: %63s %63s %X %*s %*s %*s %u %*d %lu",
-                            &slot, local_addr, remote_addr, &state, &uid, &inode);
-        
-        if(matched < 6){
-            continue; /* Line was malformed and should be skipped */
+                            &slot, local_addr, remote_addr, &state,
+                            &uid, &inode);
+
+        if (matched < 6) {
+            continue;
         }
 
-        /* Check if this inode belongs to our process */
-        if(!inode_in_set(inode, target_inodes, inode_count)){
-            continue; /* inode doesn't belong to process*/
+        if (!inode_in_set(inode, target_inodes, inode_count)) {
+            continue;
         }
 
-        /* Parse addresses */
         uint32_t local_ip, remote_ip;
         uint16_t local_port, remote_port;
 
-        if(parse_hex_addr(local_addr, &local_ip, &local_port) !=0 || 
-           parse_hex_addr(remote_addr, &remote_ip, &remote_port) != 0){
-           continue; 
+        if (parse_hex_addr(local_addr, &local_ip, &local_port) != 0 ||
+            parse_hex_addr(remote_addr, &remote_ip, &remote_port) != 0) {
+            continue;
         }
 
-        /* Store the result */
         array[count].is_tcp = is_tcp;
         array[count].local_addr = local_ip;
         array[count].local_port = local_port;
@@ -198,34 +191,32 @@ static int parse_net_file(const char *path, bool is_tcp,
         array[count].inode = inode;
         count++;
 
-        /* Grow the array if required */
-        if(count == capacity){
+        /* Double capacity when full (amortized O(1) insertion) */
+        if (count == capacity) {
             capacity *= 2;
-            socket_info_t *new_array = realloc(array, capacity * sizeof(socket_info_t));
-
-            if(new_array == NULL){
+            socket_info_t *new_array = realloc(array,
+                                               capacity * sizeof(socket_info_t));
+            if (new_array == NULL) {
                 free(array);
                 fclose(fp);
                 return -1;
             }
-
             array = new_array;
         }
     }
 
     fclose(fp);
 
-    /* Handle empty results */
-    if(count == 0){
+    if (count == 0) {
         free(array);
         *results = NULL;
         *result_count = 0;
         return 0;
     }
 
-    /* Shrink array to exact size */
+    /* Shrink to exact size to minimize memory footprint */
     socket_info_t *final = realloc(array, count * sizeof(socket_info_t));
-    if(final != NULL){
+    if (final != NULL) {
         array = final;
     }
 
@@ -234,105 +225,102 @@ static int parse_net_file(const char *path, bool is_tcp,
     return 0;
 }
 
+/*
+ * Implementation of find_process_sockets() - see net.h for API docs.
+ */
 int find_process_sockets(pid_t pid, socket_info_t **sockets, int *count)
 {
-    /* Initialize outputs */
     *sockets = NULL;
     *count = 0;
 
-    /* Get all file descriptors for the process */
-    fd_entry_t *fds= NULL;
+    fd_entry_t *fds = NULL;
     int fd_count = 0;
 
-    if(enumerate_fds(pid, &fds, &fd_count) != 0){
+    if (enumerate_fds(pid, &fds, &fd_count) != 0) {
         return -1;
     }
 
-    /* Extract socket inodes from FD entrires */
+    /* Extract socket inodes for correlation with /proc/net files */
     unsigned long *socket_inodes = NULL;
     int inode_count = 0;
 
-    if(fd_count > 0){
+    if (fd_count > 0) {
         socket_inodes = malloc(fd_count * sizeof(unsigned long));
-        if(socket_inodes == NULL){
+        if (socket_inodes == NULL) {
             fd_entries_free(fds);
             return -1;
         }
 
-        for(int i = 0; i < fd_count; i++){
-            if(fds[i].is_socket){
+        for (int i = 0; i < fd_count; i++) {
+            if (fds[i].is_socket) {
                 socket_inodes[inode_count++] = fds[i].socket_inode;
             }
         }
     }
 
-    /* Done with FD entries */
     fd_entries_free(fds);
 
-    /* No socket - return empty success */
-    if(inode_count == 0){
+    if (inode_count == 0) {
         free(socket_inodes);
         return 0;
     }
 
-    /* Parse TCP connections */
     socket_info_t *tcp_sockets = NULL;
     int tcp_count = 0;
 
-    if(parse_net_file(PROC_NET_TCP, true, socket_inodes, inode_count, &tcp_sockets, & tcp_count) != 0){
+    if (parse_net_file(PROC_NET_TCP, true, socket_inodes, inode_count,
+                      &tcp_sockets, &tcp_count) != 0) {
         free(socket_inodes);
         return -1;
     }
 
-    /* Parse UDO sockets */
     socket_info_t *udp_sockets = NULL;
     int udp_count = 0;
 
-    if(parse_net_file(PROC_NET_UDP, false, socket_inodes, inode_count, &udp_sockets, &udp_count) != 0){
+    if (parse_net_file(PROC_NET_UDP, false, socket_inodes, inode_count,
+                      &udp_sockets, &udp_count) != 0) {
         free(socket_inodes);
         socket_list_free(tcp_sockets);
         return -1;
     }
 
-    /* Done with array */
     free(socket_inodes);
 
-    /* Merge TCP and UDP results */
     int total_count = tcp_count + udp_count;
 
-    if(total_count == 0){
+    if (total_count == 0) {
         socket_list_free(tcp_sockets);
         socket_list_free(udp_sockets);
         return 0;
     }
 
     socket_info_t *merged = malloc(total_count * sizeof(socket_info_t));
-    if(merged == NULL){
+    if (merged == NULL) {
         socket_list_free(tcp_sockets);
         socket_list_free(udp_sockets);
         return -1;
     }
 
-
-    /* Copy TCP results */
-    if(tcp_count > 0){
+    if (tcp_count > 0) {
         memcpy(merged, tcp_sockets, tcp_count * sizeof(socket_info_t));
         socket_list_free(tcp_sockets);
     }
 
-    /* Copy UDP results */
-    if(udp_count > 0){
-        memcpy(merged + tcp_count, udp_sockets, udp_count * sizeof(socket_info_t));
+    if (udp_count > 0) {
+        memcpy(merged + tcp_count, udp_sockets,
+               udp_count * sizeof(socket_info_t));
         socket_list_free(udp_sockets);
     }
 
-    /* Memory is freed in main */
     *sockets = merged;
     *count = total_count;
     return 0;
 }
 
+/*
+ * Free socket array returned by find_process_sockets().
+ */
 void socket_list_free(socket_info_t *sockets)
 {
-    free(sockets);  /* free(NULL) is safe */
+    free(sockets);
 }

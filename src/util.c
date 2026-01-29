@@ -16,24 +16,33 @@
 
 #define BASE 10
 
-int build_proc_path(pid_t pid, const char *file, char *out_path, size_t out_path_len)
+/*
+ * Build a path to a /proc file.
+ * If file is NULL, builds path to /proc/<pid> directory.
+ * Returns 0 on success, -1 if path would be truncated.
+ */
+int build_proc_path(pid_t pid, const char *file, char *out_path,
+                    size_t out_path_len)
 {
     int ret;
 
-    if(file != NULL){
+    if (file != NULL) {
         ret = snprintf(out_path, out_path_len, "/proc/%d/%s", pid, file);
-    }else{
+    } else {
         ret = snprintf(out_path, out_path_len, "/proc/%d", pid);
     }
 
-    if(ret < 0 || ret >= (int)out_path_len){
+    if (ret < 0 || ret >= (int)out_path_len) {
         return -1;
     }
 
     return 0;
 }
 
-
+/*
+ * Build a path to a thread-specific /proc file.
+ * Returns 0 on success, -1 if path would be truncated.
+ */
 int build_task_path(pid_t pid, pid_t tid, const char *file,
                     char *buf, size_t buflen)
 {
@@ -45,6 +54,9 @@ int build_task_path(pid_t pid, pid_t tid, const char *file,
     return 0;
 }
 
+/*
+ * Check if a process exists by testing access to /proc/<pid>.
+ */
 bool pid_exists(pid_t pid)
 {
     char buf[256];
@@ -56,6 +68,11 @@ bool pid_exists(pid_t pid)
     return access(buf, F_OK) == 0;
 }
 
+/*
+ * Parse a string as a PID.
+ * Returns the PID on success, -1 on error.
+ * Rejects negative numbers, non-numeric strings, and zero.
+ */
 pid_t parse_pid(const char *str)
 {
     if (str == NULL || *str == '\0') {
@@ -81,6 +98,9 @@ pid_t parse_pid(const char *str)
     return pid;
 }
 
+/*
+ * Convert process state enum to human-readable string.
+ */
 const char *state_to_string(proc_state_t state)
 {
     switch (state) {
@@ -102,6 +122,10 @@ const char *state_to_string(proc_state_t state)
     }
 }
 
+/*
+ * Convert /proc state character to enum.
+ * Maps: R=Running, S=Sleeping, D=Disk Sleep, Z=Zombie, T=Stopped, I=Idle
+ */
 proc_state_t char_to_state(char c)
 {
     switch (c) {
