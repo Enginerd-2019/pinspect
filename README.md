@@ -200,7 +200,3 @@ Challenges encountered and solutions:
 ## License
 
 MIT License - See [LICENSE](LICENSE)
-
----
-
-*Part of a systems programming portfolio. See [2-Year Roadmap](../2-YearRoadmap.md) for context.*
